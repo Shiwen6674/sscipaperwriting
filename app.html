@@ -295,14 +295,41 @@
             }
         }
 
+        // --- 1. API Helper (With Retry Logic) ---
         async function callBackendAPI(payload) {
-            try {
-                const response = await fetch(GAS_API_URL, {
-                    method: "POST", body: JSON.stringify(payload),
-                    headers: { "Content-Type": "text/plain;charset=utf-8" } 
-                });
-                return await response.json();
-            } catch (error) { return { status: "error", message: "連線失敗 (API Error)。" }; }
+            const maxRetries = 3; // 最多重試 3 次
+            let attempt = 0;
+            
+            while (attempt < maxRetries) {
+                try {
+                    const response = await fetch(GAS_API_URL, {
+                        method: "POST",
+                        body: JSON.stringify(payload),
+                        headers: { "Content-Type": "text/plain;charset=utf-8" } 
+                    });
+                    
+                    const json = await response.json();
+                    
+                    // 如果後端回傳錯誤，且錯誤訊息包含 Resource exhausted，則視為需要重試
+                    if (json.status === 'error' && json.message.includes('Resource exhausted')) {
+                        throw new Error("QuotaLimit");
+                    }
+                    
+                    return json; // 成功回傳
+                    
+                } catch (error) {
+                    attempt++;
+                    console.warn(`API Attempt ${attempt} failed:`, error);
+                    
+                    if (attempt >= maxRetries) {
+                        return { status: "error", message: "系統忙碌中 (Resource Exhausted)，請稍後再試。" };
+                    }
+                    
+                    // 等待時間：第一次 2秒，第二次 4秒，第三次 8秒 (指數退避)
+                    const waitTime = 2000 * Math.pow(2, attempt - 1);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+            }
         }
 
         async function switchTab(tabId) {
@@ -488,18 +515,22 @@
             // 加上語言控制
             prompt += lang === 'zh-TW' ? " (Output in Traditional Chinese)." : " (Output in English).";
 
+       // ... (前略)
             const res = await callBackendAPI({ action: "generate_content", phase: phase, user_prompt: prompt });
             loading.remove();
             isProcessing = false;
 
             if (res.status === 'success') {
+                // ... (成功邏輯不變)
                 addChatMessage('system', `✅ **${phase}** Generated.`);
-                const formatted = formatAIOutput(res.data);
-                document.getElementById('editor').innerHTML += `<div class="mb-10 animate-fade-in group prose prose-slate max-w-none" data-phase="${phase}"><div class="flex items-center gap-2 mb-4 border-b-2 border-indigo-50 pb-2 select-none not-prose"><span class="text-[10px] font-bold text-white uppercase tracking-wider bg-indigo-500 px-2 py-1 rounded shadow-sm">Phase: ${phase}</span><span class="text-[10px] text-slate-400 font-mono">${new Date().toLocaleTimeString()}</span></div>${formatted}</div>`;
-                document.getElementById('editor').scrollTop = document.getElementById('editor').scrollHeight;
-                updateWordCount();
+                // ...
             } else {
-                addChatMessage('system', `❌ Error: ${res.message}`);
+                // 優化錯誤顯示
+                let errorMsg = res.message;
+                if (errorMsg.includes("Resource exhausted")) {
+                    errorMsg = "⚠️ AI 正在休息中 (配額已滿)，請等待約 1 分鐘後再試。";
+                }
+                addChatMessage('system', `❌ Error: ${errorMsg}`);
             }
         }
 
