@@ -48,7 +48,7 @@
                 <span class="text-indigo-400">AI 輔助學術論文系統</span>
             </h2>
             <p class="text-slate-400 text-lg max-w-md">
-                專為研究者打造，從文獻分析到完稿，全流程智能輔助。
+                專為研究者打造，從主題規劃、文獻分析、章節撰寫到完成終稿，全流程AI輔助協作。
             </p>
         </div>
 
@@ -59,9 +59,9 @@
                     <i class="fa-solid fa-database"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-xl mb-1">真實文獻引用</h3>
+                    <h3 class="font-bold text-xl mb-1">100％真實文獻引用</h3>
                     <p class="text-slate-400 text-sm leading-relaxed">
-                        系統直接解析您上傳的 WoS 文獻庫，確保每一筆引用皆為真實存在，杜絕 AI 幻覺與造假。
+                        系統直接解析您上傳的 WoS 文獻庫，確保每一筆引用皆為真實存在，完全杜絕 AI 幻覺與造假。
                     </p>
                 </div>
             </div>
@@ -70,9 +70,9 @@
                     <i class="fa-solid fa-pen-nib"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-xl mb-1">SSCI 級寫作策略</h3>
+                    <h3 class="font-bold text-xl mb-1">SSCI 寫作策略</h3>
                     <p class="text-slate-400 text-sm leading-relaxed">
-                        內建頂級期刊編輯邏輯，從緒論缺口到討論對話，引導您產出高品質學術論文。
+                        內建頂級SSCI期刊編輯邏輯，從緒論起步到討論對話，引導您產出高品質學術論文。
                     </p>
                 </div>
             </div>
@@ -83,7 +83,7 @@
                 <div>
                     <h3 class="font-bold text-xl mb-1">嚴謹學術倫理</h3>
                     <p class="text-slate-400 text-sm leading-relaxed">
-                        強調理論貢獻與批判性對話，協助您完成符合學術規範的高水準研究。
+                        強調論文學術貢獻與批判性對話，協助您完成符合學術規範的高水準研究。
                     </p>
                 </div>
             </div>
@@ -148,7 +148,7 @@
             <div id="view-register" class="hidden animate-fade-in">
                 <div class="text-center mb-6">
                     <h2 class="text-2xl font-bold text-slate-800">註冊新帳號</h2>
-                    <p class="text-slate-500 text-sm mt-2">加入我們，開始您的學術寫作之旅</p>
+                    <p class="text-slate-500 text-sm mt-2">讓我們開始您的學術寫作之旅</p>
                 </div>
 
                 <form onsubmit="handleRegister(event)" class="space-y-4">
@@ -162,8 +162,7 @@
                             <select id="reg-gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none">
                                 <option>男</option>
                                 <option>女</option>
-                                <option>其他</option>
-                            </select>
+                              </select>
                         </div>
                     </div>
 
@@ -312,7 +311,7 @@
 
             if (res.status === 'success') {
                 // 登入成功，跳轉到 index.html
-                window.location.href = "index.html"; 
+                window.location.href = "app.html"; 
             } else {
                 alert("登入失敗: " + res.message);
                 btn.innerHTML = originalText;
