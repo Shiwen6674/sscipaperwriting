@@ -27,14 +27,16 @@
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- 優化後的文章閱讀樣式 (Typography) --- */
+        /* Typography Optimization */
         .prose h2 { font-size: 1.5em; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.8em; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-        .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.2em; margin-bottom: 0.6em; color: #334155; }
+        .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 2em; margin-bottom: 1em; color: #4338ca; /* Indigo-700 */ }
         .prose p { margin-bottom: 1.2em; line-height: 1.8; text-align: justify; color: #374151; }
         .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1.2em; }
         .prose li { margin-bottom: 0.5em; line-height: 1.6; }
         .prose strong { color: #0f172a; font-weight: 600; }
-        .prose blockquote { border-left: 4px solid #6366f1; padding-left: 1em; color: #4b5563; font-style: italic; margin-bottom: 1.2em; }
+        
+        /* Highlight sections */
+        .section-break { margin-top: 2rem; border-top: 2px dashed #e2e8f0; padding-top: 1rem; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex">
@@ -80,7 +82,6 @@
     </aside>
 
     <main class="flex-1 relative overflow-hidden flex flex-col">
-        
         <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10">
             <h2 id="page-title" class="text-lg font-semibold text-slate-700" data-i18n="title_setup">主題設定</h2>
             <div class="flex gap-3">
@@ -89,31 +90,22 @@
         </header>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 p-6 relative">
-
             <div id="view-setup" class="max-w-4xl mx-auto space-y-6 animate-fade-in">
                 <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex items-center gap-5 mb-8 border-b border-slate-100 pb-6">
-                        <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
-                            <i class="fa-solid fa-sliders"></i>
-                        </div>
+                        <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner"><i class="fa-solid fa-sliders"></i></div>
                         <div>
                             <h3 class="text-xl font-bold text-slate-800" data-i18n="setup_canvas_title">研究變項畫布 (Variable Canvas)</h3>
-                            <p class="text-slate-500 text-sm mt-1" data-i18n="setup_canvas_desc">清晰定義變項是 SSCI 題目的核心。系統將依此控制 AI 的寫作方向。</p>
+                            <p class="text-slate-500 text-sm mt-1" data-i18n="setup_canvas_desc">清晰定義變項是 SSCI 題目的核心。</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="space-y-3">
-                            <label class="text-sm font-bold text-slate-700 flex justify-between">
-                                <span data-i18n="setup_iv">自變項 (Independent Variable)</span>
-                                <span class="text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Intervention</span>
-                            </label>
+                            <label class="text-sm font-bold text-slate-700 flex justify-between"><span data-i18n="setup_iv">自變項 (IV)</span><span class="text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Intervention</span></label>
                             <input type="text" id="iv-input" placeholder="e.g., Generative AI in PBL" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-slate-700">
                         </div>
                         <div class="space-y-3">
-                            <label class="text-sm font-bold text-slate-700 flex justify-between">
-                                <span data-i18n="setup_dv">依變項 (Dependent Variable)</span>
-                                <span class="text-xs font-normal text-teal-600 bg-teal-50 px-2 py-0.5 rounded">Outcome</span>
-                            </label>
+                            <label class="text-sm font-bold text-slate-700 flex justify-between"><span data-i18n="setup_dv">依變項 (DV)</span><span class="text-xs font-normal text-teal-600 bg-teal-50 px-2 py-0.5 rounded">Outcome</span></label>
                             <input type="text" id="dv-input" placeholder="e.g., Argumentation Quality" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-slate-700">
                         </div>
                     </div>
@@ -123,18 +115,14 @@
                     </div>
                 </div>
                 <div class="flex justify-end pt-4">
-                    <button onclick="switchTab('data')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2">
-                        <span data-i18n="btn_next_data">下一步：上傳文獻</span> <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-                    </button>
+                    <button onclick="switchTab('data')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2"><span data-i18n="btn_next_data">下一步：上傳文獻</span> <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i></button>
                 </div>
             </div>
 
             <div id="view-data" class="hidden max-w-6xl mx-auto space-y-6">
                 <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center transition-all">
                     <div id="upload-zone" class="border-2 border-dashed border-slate-300 rounded-xl p-12 hover:bg-indigo-50/50 hover:border-indigo-400 transition-all cursor-pointer group" onclick="document.getElementById('file-upload').click()">
-                        <div class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-file-csv"></i>
-                        </div>
+                        <div class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 group-hover:scale-110 transition-transform"><i class="fa-solid fa-file-csv"></i></div>
                         <h3 class="text-xl font-bold text-slate-700 group-hover:text-indigo-700" data-i18n="data_upload_title">點擊上傳 WoS 文獻資料 (Excel/CSV)</h3>
                         <p class="text-slate-500 mt-3 max-w-md mx-auto" data-i18n="data_upload_desc">系統將自動解析：Authors, Year, Title, Journal, DOI, Abstract</p>
                         <input type="file" id="file-upload" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
@@ -168,22 +156,18 @@
                     </div>
                 </div>
                 <div class="flex justify-end pt-2">
-                     <button onclick="switchTab('write')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2">
-                        <span data-i18n="btn_next_write">進入寫作模式</span> <i class="fa-solid fa-pen-nib group-hover:rotate-12 transition-transform"></i>
-                    </button>
+                     <button onclick="switchTab('write')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2"><span data-i18n="btn_next_write">進入寫作模式</span> <i class="fa-solid fa-pen-nib group-hover:rotate-12 transition-transform"></i></button>
                 </div>
             </div>
 
             <div id="view-write" class="hidden h-full flex flex-col animate-fade-in">
                 <div class="flex gap-6 h-full pb-2">
-                    
                     <div class="w-[400px] flex flex-col glass-panel rounded-2xl shadow-sm overflow-hidden border border-indigo-100 shrink-0">
                         <div class="p-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white flex flex-col gap-3 shadow-md z-10">
                             <div class="flex justify-between items-center">
                                 <span class="font-bold text-sm tracking-wide"><i class="fa-solid fa-robot mr-2"></i>SSCI AI Coach</span>
                                 <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white/90">Master Level</span>
                             </div>
-
                             <div class="relative">
                                 <select id="phase-selector" onchange="updateWordCount()" class="w-full text-xs text-slate-800 bg-white rounded-lg pl-3 pr-8 py-2.5 outline-none font-medium appearance-none shadow-sm cursor-pointer hover:bg-indigo-50 transition-colors">
                                     <option value="outline">Phase 0: 大綱生成 (Outline)</option>
@@ -199,7 +183,6 @@
                                 <div class="absolute right-3 top-2.5 text-slate-500 pointer-events-none"><i class="fa-solid fa-chevron-down text-xs"></i></div>
                             </div>
                         </div>
-                        
                         <div id="chat-history" class="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-5 bg-slate-50/50">
                             <div class="flex gap-3 animate-fade-in">
                                 <div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div>
@@ -208,17 +191,12 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="p-4 bg-white border-t border-slate-100">
                             <div class="relative group">
                                 <textarea id="ai-input" placeholder="輸入指令或按 Enter 直接生成..." class="w-full pl-4 pr-12 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none text-sm transition-all shadow-inner" rows="2" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); simulateAIGeneration(); }"></textarea>
-                                <button onclick="simulateAIGeneration()" class="absolute right-2 bottom-2.5 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <i class="fa-solid fa-paper-plane text-xs"></i>
-                                </button>
+                                <button onclick="simulateAIGeneration()" class="absolute right-2 bottom-2.5 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"><i class="fa-solid fa-paper-plane text-xs"></i></button>
                             </div>
-                            <p class="text-[10px] text-slate-400 mt-2 text-center flex items-center justify-center gap-1">
-                                <i class="fa-solid fa-bolt text-amber-400"></i> Powered by Gemini 2.0 Flash with RAG
-                            </p>
+                            <p class="text-[10px] text-slate-400 mt-2 text-center flex items-center justify-center gap-1"><i class="fa-solid fa-bolt text-amber-400"></i> Powered by Gemini 2.0 Flash with RAG</p>
                         </div>
                     </div>
 
@@ -228,170 +206,121 @@
                             <button class="p-2 hover:bg-white hover:shadow-sm hover:text-indigo-600 rounded transition-all" title="Italic"><i class="fa-solid fa-italic"></i></button>
                             <button class="p-2 hover:bg-white hover:shadow-sm hover:text-indigo-600 rounded transition-all" title="List"><i class="fa-solid fa-list-ul"></i></button>
                             <div class="h-4 w-px bg-slate-300 mx-2"></div>
-                            
                             <div class="flex items-center gap-3 px-2 text-xs font-mono bg-white border border-slate-200 rounded-md py-1 shadow-sm">
                                 <span class="text-indigo-600 font-bold" id="phase-word-count">Phase: 0</span>
                                 <span class="text-slate-300">|</span>
                                 <span class="text-slate-600" id="total-word-count">Total: 0</span>
                             </div>
-
                             <div class="flex-1"></div>
-                            <button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium hover:bg-indigo-100 transition-colors">
-                                <i class="fa-solid fa-download mr-1"></i> <span data-i18n="btn_export">Export</span>
-                            </button>
+                            <button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium hover:bg-indigo-100 transition-colors"><i class="fa-solid fa-download mr-1"></i> <span data-i18n="btn_export">Export</span></button>
                         </div>
-                        
                         <div id="editor" contenteditable="true" oninput="updateWordCount()" class="editor-area flex-1 p-12 text-lg text-slate-800 leading-relaxed overflow-y-auto custom-scrollbar outline-none serif-font prose max-w-none">
                             <h1 class="text-3xl font-bold mb-6 text-slate-900 font-sans">Untitled Manuscript</h1>
                             <p class="text-slate-400 italic">在此開始寫作，或等待左側 AI 教練生成內容...</p>
                         </div>
                     </div>
-
                 </div>
             </div>
-
         </div>
     </main>
 
     <script>
-        // ==========================================
-        // CONFIGURATION
-        // ==========================================
+        // CONFIG
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxzuSB40CJ_8VgEG5HsZR0QBqShK5TMKQAHHkQf_ww4gGy90uWZUoLjiuwbBpT4BkJoKQ/exec"; 
         
         let literatureData = [];
         let projectInfo = { iv: '', dv: '', topic: '' };
         let isProcessing = false;
 
-        // --- UI Translation Dictionary ---
         const translations = {
             'zh-TW': {
-                'nav_setup': '1. 主題設定',
-                'nav_data': '2. 文獻解析',
-                'nav_write': '3. 結構化寫作',
-                'title_setup': '主題設定 (The Topic Orientation)',
-                'setup_canvas_title': '研究變項畫布 (Variable Canvas)',
+                'nav_setup': '1. 主題設定', 'nav_data': '2. 文獻解析', 'nav_write': '3. 結構化寫作',
+                'title_setup': '主題設定 (The Topic Orientation)', 'setup_canvas_title': '研究變項畫布 (Variable Canvas)',
                 'setup_canvas_desc': '清晰定義變項是 SSCI 題目的核心。系統將依此控制 AI 的寫作方向。',
-                'setup_iv': '自變項 (Independent Variable)',
-                'setup_dv': '依變項 (Dependent Variable)',
-                'setup_topic': '完整研究主題 (Research Topic)',
-                'btn_next_data': '下一步：上傳文獻',
-                'data_upload_title': '點擊上傳 WoS 文獻資料 (Excel/CSV)',
+                'setup_iv': '自變項 (IV)', 'setup_dv': '依變項 (DV)', 'setup_topic': '完整研究主題',
+                'btn_next_data': '下一步：上傳文獻', 'data_upload_title': '點擊上傳 WoS 文獻資料',
                 'data_upload_desc': '系統將自動解析：Authors, Year, Title, Journal, DOI, Abstract',
-                'data_preview_title': '文獻池預覽',
-                'btn_next_write': '進入寫作模式',
-                'ai_welcome': '你好！我是你的 SSCI 寫作教練。請選擇上方寫作階段，並輸入指令開始。',
-                'btn_export': '匯出'
+                'data_preview_title': '文獻池預覽', 'btn_next_write': '進入寫作模式',
+                'ai_welcome': '你好！我是你的 SSCI 寫作教練。請選擇上方寫作階段，並輸入指令開始。', 'btn_export': '匯出'
             },
             'en-US': {
-                'nav_setup': '1. Setup',
-                'nav_data': '2. Analysis',
-                'nav_write': '3. Writing',
-                'title_setup': 'Topic Orientation',
-                'setup_canvas_title': 'Variable Canvas',
-                'setup_canvas_desc': 'Define your variables clearly. This guides the AI in generating SSCI-level content.',
-                'setup_iv': 'Independent Variable (IV)',
-                'setup_dv': 'Dependent Variable (DV)',
-                'setup_topic': 'Research Topic',
-                'btn_next_data': 'Next: Upload Data',
-                'data_upload_title': 'Upload WoS Export (Excel/CSV)',
+                'nav_setup': '1. Setup', 'nav_data': '2. Analysis', 'nav_write': '3. Writing',
+                'title_setup': 'Topic Orientation', 'setup_canvas_title': 'Variable Canvas',
+                'setup_canvas_desc': 'Define variables clearly to guide AI.',
+                'setup_iv': 'Independent Variable (IV)', 'setup_dv': 'Dependent Variable (DV)', 'setup_topic': 'Research Topic',
+                'btn_next_data': 'Next: Upload Data', 'data_upload_title': 'Upload WoS Data (Excel/CSV)',
                 'data_upload_desc': 'Auto-parsing: Authors, Year, Title, Journal, DOI, Abstract',
-                'data_preview_title': 'Literature Pool',
-                'btn_next_write': 'Start Writing',
-                'ai_welcome': 'Hello! I am your SSCI Writing Coach. Select a phase above and type a command to start.',
-                'btn_export': 'Export'
+                'data_preview_title': 'Literature Pool', 'btn_next_write': 'Start Writing',
+                'ai_welcome': 'Hello! I am your SSCI Writing Coach. Select a phase and start.', 'btn_export': 'Export'
             }
         };
 
-        // --- 1. API Helper ---
+        // --- Functions ---
         async function callBackendAPI(payload) {
             try {
                 const response = await fetch(GAS_API_URL, {
-                    method: "POST",
-                    body: JSON.stringify(payload),
+                    method: "POST", body: JSON.stringify(payload),
                     headers: { "Content-Type": "text/plain;charset=utf-8" } 
                 });
                 return await response.json();
-            } catch (error) {
-                console.error("API Error:", error);
-                return { status: "error", message: "連線失敗 (API Error)。" };
-            }
+            } catch (error) { return { status: "error", message: "連線失敗 (API Error)。" }; }
         }
 
-        // --- 2. Tab Navigation & Auto-save ---
         async function switchTab(tabId) {
             ['setup', 'data', 'write'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.add('hidden');
-                const navBtn = document.getElementById(`nav-${id}`);
-                navBtn.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-900/50');
-                navBtn.classList.add('text-slate-300', 'hover:bg-slate-800');
+                document.getElementById(`nav-${id}`).classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                document.getElementById(`nav-${id}`).classList.add('text-slate-300', 'hover:bg-slate-800');
             });
-
             document.getElementById(`view-${tabId}`).classList.remove('hidden');
-            const activeBtn = document.getElementById(`nav-${tabId}`);
-            activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800');
-            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-900/50');
+            document.getElementById(`nav-${tabId}`).classList.remove('text-slate-300', 'hover:bg-slate-800');
+            document.getElementById(`nav-${tabId}`).classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+            
+            const titles = { 'setup': '主題設定', 'data': '文獻解析', 'write': '結構化寫作' };
+            document.getElementById('page-title').innerText = titles[tabId];
 
             if (tabId !== 'setup') {
-                const newIv = document.getElementById('iv-input').value;
-                const newDv = document.getElementById('dv-input').value;
-                const newTopic = document.getElementById('topic-input').value;
-
-                if (newIv !== projectInfo.iv || newDv !== projectInfo.dv || newTopic !== projectInfo.topic) {
-                    projectInfo = { iv: newIv, dv: newDv, topic: newTopic };
+                const newInfo = {
+                    iv: document.getElementById('iv-input').value,
+                    dv: document.getElementById('dv-input').value,
+                    topic: document.getElementById('topic-input').value
+                };
+                if (JSON.stringify(newInfo) !== JSON.stringify(projectInfo)) {
+                    projectInfo = newInfo;
                     callBackendAPI({ action: "save_settings", data: projectInfo });
                 }
             }
         }
 
-        // --- 3. Language Switcher Logic ---
         function changeUILanguage() {
             const lang = document.getElementById('global-lang-selector').value;
             const texts = translations[lang];
-            
-            // Update all elements with data-i18n attribute
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (texts[key]) el.innerText = texts[key];
             });
-
-            // Update Placeholder inputs separately
-            if (lang === 'zh-TW') {
-                document.getElementById('ai-input').placeholder = "輸入指令或按 Enter 直接生成...";
-            } else {
-                document.getElementById('ai-input').placeholder = "Enter command or press Enter to generate...";
-            }
+            document.getElementById('ai-input').placeholder = lang === 'zh-TW' ? "輸入指令..." : "Enter command...";
         }
 
-        // --- 4. File Upload & Table ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const uploadZone = document.getElementById('upload-zone');
             const originalContent = uploadZone.innerHTML;
             uploadZone.innerHTML = `<div class="animate-pulse"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i><h3 class="text-lg font-bold text-slate-700">Processing...</h3></div>`;
-
             const reader = new FileReader();
             reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    
                     literatureData = jsonData;
                     document.getElementById('record-count').innerText = `${jsonData.length} records`;
                     document.getElementById('data-preview-container').classList.remove('hidden');
                     renderTablePreview(jsonData); 
-                    
                     const response = await callBackendAPI({ action: "upload_literature", data: jsonData });
-                    if (response.status === 'success') addChatMessage('system', `✅ Uploaded ${jsonData.length} references.`);
-                    else addChatMessage('system', `❌ Upload Failed: ${response.message}`);
-                } catch (err) {
-                    alert("Parsing Error");
-                } finally {
-                    uploadZone.innerHTML = originalContent;
-                }
+                    addChatMessage('system', response.status === 'success' ? `✅ Uploaded ${jsonData.length} references.` : `❌ Failed: ${response.message}`);
+                } catch (err) { alert("Parsing Error"); } finally { uploadZone.innerHTML = originalContent; }
             };
             reader.readAsArrayBuffer(file);
         }
@@ -400,199 +329,129 @@
             const tbody = document.getElementById('literature-table-body');
             tbody.innerHTML = '';
             rows.forEach((row, index) => {
-                // (Existing table rendering logic...)
-                const authorRaw = row['Author Full Names'] || row['Authors'] || 'Unknown';
-                const authorDisplay = authorRaw.length > 40 ? authorRaw.split(';')[0] + ' et al.' : authorRaw;
-                const year = row['Publication Year'] || row['PY'] || 'N/A';
-                const title = row['Article Title'] || row['TI'] || 'No Title';
-                const journal = row['Source Title'] || row['SO'] || 'Unknown Journal';
-                const volume = row['Volume'] || '';
-                const issue = row['Issue'] || '';
-                let volIssue = volume ? `${volume}` : '';
-                if (issue) volIssue += `(${issue})`;
-                let pages = '';
-                if (row['Start Page'] && row['End Page']) pages = `${row['Start Page']}-${row['End Page']}`;
-                else if (row['Article Number']) pages = `Art. ${row['Article Number']}`;
+                const author = (row['Author Full Names'] || row['Authors'] || 'Unknown').split(';')[0];
+                const year = row['Publication Year'] || 'N/A';
+                const title = row['Article Title'] || 'No Title';
+                const journal = row['Source Title'] || 'Unknown';
+                const volIssue = (row['Volume'] || '') + (row['Issue'] ? `(${row['Issue']})` : '');
+                const pages = (row['Start Page'] && row['End Page']) ? `${row['Start Page']}-${row['End Page']}` : (row['Article Number'] || '');
                 const doi = row['DOI'] || '';
-                const abstract = row['Abstract'] || 'No Abstract available.';
-                const keywords = row['Author Keywords'] || '';
-
+                const abstract = row['Abstract'] || 'No Abstract';
+                
                 const tr = document.createElement('tr');
                 tr.className = 'bg-white border-b border-slate-50 hover:bg-indigo-50/30 transition-colors cursor-pointer group';
-                tr.onclick = () => toggleDetails(index); 
+                tr.onclick = () => toggleDetails(index);
                 tr.innerHTML = `
-                    <td class="px-4 py-4 font-mono text-slate-400 text-center w-12">${index + 1}</td>
-                    <td class="px-4 py-4 font-medium text-slate-900 truncate max-w-[150px]" title="${authorRaw}">${authorDisplay}</td>
+                    <td class="px-4 py-4 font-mono text-center text-slate-400">${index + 1}</td>
+                    <td class="px-4 py-4 font-medium truncate max-w-[150px]" title="${author}">${author} et al.</td>
                     <td class="px-4 py-4 text-slate-500">${year}</td>
-                    <td class="px-4 py-4 truncate max-w-[200px] font-medium text-slate-700 group-hover:text-indigo-700 transition-colors" title="${title}">${title}</td>
+                    <td class="px-4 py-4 truncate max-w-[200px] font-medium text-slate-700 group-hover:text-indigo-700" title="${title}">${title}</td>
                     <td class="px-4 py-4 truncate max-w-[150px] text-indigo-600 italic font-serif" title="${journal}">${journal}</td>
                     <td class="px-4 py-4 text-slate-600 whitespace-nowrap">${volIssue}</td>
                     <td class="px-4 py-4 text-slate-600 whitespace-nowrap">${pages}</td>
                     <td class="px-4 py-4 text-slate-600 truncate max-w-[150px]" title="${doi}">${doi}</td>
-                    <td class="px-4 py-4 text-center">
-                        <button class="text-xs bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-indigo-600 group-hover:shadow-sm px-3 py-1.5 rounded-full transition-all">Detail</button>
-                    </td>
-                `;
+                    <td class="px-4 py-4 text-center"><button class="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full group-hover:bg-white">Detail</button></td>`;
                 tbody.appendChild(tr);
+                
                 const trDetail = document.createElement('tr');
                 trDetail.id = `detail-${index}`;
                 trDetail.className = 'hidden bg-slate-50/50 border-b border-slate-100 shadow-inner';
-                trDetail.innerHTML = `
-                    <td colspan="9" class="p-6">
-                        <div class="flex flex-col gap-4">
-                            <div class="flex flex-wrap gap-2 text-xs font-mono">
-                                ${doi ? `<a href="https://doi.org/${doi}" target="_blank" class="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-600 hover:underline">DOI: ${doi}</a>` : ''}
-                                ${keywords ? `<span class="px-2 py-1 bg-amber-50 border border-amber-200 rounded text-amber-700">Keywords: ${keywords}</span>` : ''}
-                            </div>
-                            <div class="text-sm text-slate-700 leading-relaxed bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                                <div class="font-bold text-slate-900 mb-2 flex items-center gap-2 text-xs uppercase tracking-wider"><i class="fa-solid fa-align-left text-indigo-500"></i> Abstract</div>
-                                ${abstract}
-                            </div>
-                        </div>
-                    </td>
-                `;
+                trDetail.innerHTML = `<td colspan="9" class="p-6"><div class="text-sm text-slate-700 bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><div class="font-bold mb-2 text-xs uppercase text-indigo-500">Abstract</div>${abstract}</div></td>`;
                 tbody.appendChild(trDetail);
             });
         }
 
         function toggleDetails(index) {
             const row = document.getElementById(`detail-${index}`);
-            if (row.classList.contains('hidden')) row.classList.remove('hidden');
-            else row.classList.add('hidden');
+            row.classList.toggle('hidden');
         }
 
-        // --- 5. Word Count ---
+        // --- IMPROVED FORMATTER WITH SECTION BREAKS ---
+        function formatAIOutput(markdown) {
+            // 1. 強制關鍵字換行並加強標題
+            let formatted = markdown
+                .replace(/(^|\n)(期刊適配性分析|Journal Fit Analysis)/g, '\n\n### $2')
+                .replace(/(^|\n)(Phase \d+[:：]?\s*論文大綱|Outline)/g, '\n\n### $2')
+                .replace(/(^|\n)[*•-]?\s*(題目|Title)\s*[:：\(]/g, '\n\n**題目 (Title)**: ')
+                .replace(/(^|\n)[*•-]?\s*(摘要|Abstract)\s*[:：\(]/g, '\n\n**摘要 (Abstract)**: ')
+                .replace(/(^|\n)[*•-]?\s*(緒論|Introduction)\s*[:：]?/g, '\n\n### 緒論 (Introduction)')
+                .replace(/(^|\n)[*•-]?\s*(文獻探討|Literature Review)\s*[:：]?/g, '\n\n### 文獻探討 (Literature Review)')
+                .replace(/(^|\n)[*•-]?\s*(研究方法|Methodology)\s*[:：]?/g, '\n\n### 研究方法 (Methodology)')
+                .replace(/(^|\n)[*•-]?\s*(研究發現|Findings)\s*[:：]?/g, '\n\n### 研究發現 (Findings)')
+                .replace(/(^|\n)[*•-]?\s*(討論|Discussion)\s*[:：]?/g, '\n\n### 討論 (Discussion)')
+                .replace(/(^|\n)[*•-]?\s*(結論|Conclusions?)\s*[:：]?/g, '\n\n### 結論 (Conclusions)')
+                .replace(/(^|\n)(注意事項|Note[s]?)\s*[:：]/g, '\n\n**注意事項:**');
+
+            // 2. Markdown to HTML
+            let html = formatted
+                .replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mt-10 mb-4 text-indigo-700 border-b border-indigo-100 pb-2">$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-12 mb-6 text-slate-800">$1</h2>')
+                .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-bold text-slate-900">$1</strong>')
+                .replace(/\*(.*?)\*/gim, '<em class="italic text-slate-600">$1</em>')
+                .replace(/^\* (.*$)/gim, '<li class="ml-6 list-disc mb-2 pl-1">$1</li>')
+                .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-2 pl-1">$1</li>');
+
+            // 3. Paragraphs
+            return html.split(/\n\n+/).map(para => {
+                para = para.trim();
+                if (!para) return '';
+                if (para.startsWith('<h') || para.startsWith('<li')) return para;
+                return `<p class="mb-5 leading-relaxed text-justify text-slate-700">${para.replace(/\n/g, '<br>')}</p>`;
+            }).join('');
+        }
+
         function updateWordCount() {
             const editor = document.getElementById('editor');
-            const fullText = editor.innerText || "";
-            const totalCount = countWords(fullText);
+            const totalCount = (editor.innerText || "").trim().split(/\s+/).length;
             document.getElementById('total-word-count').innerText = `Total: ${totalCount}`;
-
-            const currentPhase = document.getElementById('phase-selector').value;
-            const phaseBlocks = editor.querySelectorAll(`div[data-phase="${currentPhase}"]`);
-            let phaseText = "";
-            phaseBlocks.forEach(block => phaseText += block.innerText + " ");
-            const phaseCount = countWords(phaseText);
+            
+            const phase = document.getElementById('phase-selector').value;
+            let phaseCount = 0;
+            editor.querySelectorAll(`div[data-phase="${phase}"]`).forEach(d => phaseCount += d.innerText.trim().split(/\s+/).length);
             document.getElementById('phase-word-count').innerText = `Phase: ${phaseCount}`;
         }
 
-        function countWords(str) {
-            const cleanStr = str.trim();
-            if (cleanStr === "") return 0;
-            // 中文算字數，英文算單詞
-            if (/[\u4e00-\u9fa5]/.test(cleanStr)) {
-                return cleanStr.replace(/\s+/g, '').length;
-            }
-            return cleanStr.split(/\s+/).length; 
-        }
-
-        // --- 6. AI & Formatting Logic (Text Wall Fix) ---
-        function formatAIOutput(markdown) {
-            // 這是解決文字擠在一起的核心：將 Markdown 轉為帶樣式的 HTML
-            let html = markdown
-                // Headers
-                .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-6 mb-3 text-slate-700">$1</h3>')
-                .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-8 mb-4 pb-2 border-b border-slate-200 text-slate-800">$1</h2>')
-                // Bold
-                .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-bold text-slate-900">$1</strong>')
-                // Italic
-                .replace(/\*(.*?)\*/gim, '<em class="italic">$1</em>')
-                // Lists (Bullet) - 簡單處理，將 * 開頭的行轉為 li
-                .replace(/^\* (.*$)/gim, '<li class="ml-6 list-disc mb-2 pl-1">$1</li>')
-                // Lists (Number) - 簡單處理 1. 開頭
-                .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-2 pl-1">$1</li>');
-
-            // 最重要：處理換行。將連續換行 (\n\n) 視為段落，單一換行 (\n) 視為 <br>
-            // 策略：先用 \n\n 切割成段落陣列
-            let paragraphs = html.split(/\n\n+/);
-            
-            let formattedHtml = paragraphs.map(para => {
-                para = para.trim();
-                if (!para) return '';
-                // 如果段落本身已經是標題或列表，就不包 <p>
-                if (para.startsWith('<h') || para.startsWith('<li')) return para;
-                // 否則包裝成 <p> 並處理內部的單行換行
-                return `<p class="mb-5 leading-relaxed text-justify text-slate-700">${para.replace(/\n/g, '<br>')}</p>`;
-            }).join('');
-
-            return formattedHtml;
-        }
-
         function addChatMessage(role, text) {
-            const history = document.getElementById('chat-history');
             const div = document.createElement('div');
             div.className = 'flex gap-3 animate-fade-in';
-            if (role === 'system') {
-                div.innerHTML = `<div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div><div class="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100 leading-relaxed"><p>${text.replace(/\n/g, '<br>')}</p></div>`;
-            } else {
-                div.innerHTML = `<div class="flex-1"></div><div class="bg-indigo-600 p-3.5 rounded-2xl rounded-tr-none shadow-sm text-sm text-white max-w-[85%] leading-relaxed"><p>${text}</p></div><div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex-shrink-0 flex items-center justify-center font-bold text-xs">U</div>`;
-            }
-            history.appendChild(div);
-            history.scrollTop = history.scrollHeight;
+            div.innerHTML = role === 'system' 
+                ? `<div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div><div class="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100 leading-relaxed"><p>${text.replace(/\n/g, '<br>')}</p></div>`
+                : `<div class="flex-1"></div><div class="bg-indigo-600 p-3.5 rounded-2xl rounded-tr-none shadow-sm text-sm text-white max-w-[85%] leading-relaxed"><p>${text}</p></div><div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex-shrink-0 flex items-center justify-center font-bold text-xs">U</div>`;
+            document.getElementById('chat-history').appendChild(div);
+            document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
         }
 
         async function simulateAIGeneration() {
             if (isProcessing) return;
-
-            const inputField = document.getElementById('ai-input');
-            const userText = inputField.value.trim();
+            const input = document.getElementById('ai-input');
+            const text = input.value.trim();
             const phase = document.getElementById('phase-selector').value;
             const lang = document.getElementById('global-lang-selector').value;
 
-            if (!userText && phase !== 'outline') return; 
-
+            if (!text && phase !== 'outline') return;
             isProcessing = true;
-            if (userText) addChatMessage('user', userText);
-            inputField.value = '';
+            if (text) addChatMessage('user', text);
+            input.value = '';
 
-            const loadingId = 'loading-' + Date.now();
-            const history = document.getElementById('chat-history');
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = loadingId;
-            loadingDiv.className = 'flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse';
-            loadingDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase})...`;
-            history.appendChild(loadingDiv);
-            history.scrollTop = history.scrollHeight;
+            const loading = document.createElement('div');
+            loading.innerHTML = `<div class="flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse"><i class="fa-solid fa-circle-notch fa-spin"></i> Generating...</div>`;
+            document.getElementById('chat-history').appendChild(loading);
 
-            // Prompt Construction
-            let finalPrompt = userText || "Generate academic content for this phase.";
-            if (lang === 'zh-TW') {
-                finalPrompt += " (IMPORTANT: Please output in Traditional Chinese 繁體中文).";
-            } else {
-                finalPrompt += " (IMPORTANT: Please output in English).";
-            }
+            let prompt = text || "Generate content.";
+            prompt += lang === 'zh-TW' ? " (Output in Traditional Chinese)." : " (Output in English).";
 
-            const response = await callBackendAPI({
-                action: "generate_content",
-                phase: phase,
-                user_prompt: finalPrompt
-            });
-
-            document.getElementById(loadingId).remove();
+            const res = await callBackendAPI({ action: "generate_content", phase: phase, user_prompt: prompt });
+            loading.remove();
             isProcessing = false;
 
-            if (response.status === 'success') {
+            if (res.status === 'success') {
                 addChatMessage('system', `✅ **${phase}** Generated.`);
-                
-                const editor = document.getElementById('editor');
-                const timestamp = new Date().toLocaleTimeString();
-                
-                // ★ 使用新的格式化函式解決文字擠在一起的問題 ★
-                let formattedContent = formatAIOutput(response.data);
-
-                editor.innerHTML += `
-                    <div class="mb-10 animate-fade-in group prose prose-slate max-w-none" data-phase="${phase}">
-                        <div class="flex items-center gap-2 mb-4 border-b-2 border-indigo-50 pb-2 select-none not-prose">
-                            <span class="text-[10px] font-bold text-white uppercase tracking-wider bg-indigo-500 px-2 py-1 rounded shadow-sm">Phase: ${phase}</span>
-                            <span class="text-[10px] text-slate-400 font-mono">${timestamp}</span>
-                        </div>
-                        ${formattedContent}
-                    </div>
-                `;
-                editor.scrollTop = editor.scrollHeight;
-                updateWordCount(); 
+                const formatted = formatAIOutput(res.data);
+                document.getElementById('editor').innerHTML += `<div class="mb-10 animate-fade-in group prose prose-slate max-w-none" data-phase="${phase}"><div class="flex items-center gap-2 mb-4 border-b-2 border-indigo-50 pb-2 select-none not-prose"><span class="text-[10px] font-bold text-white uppercase tracking-wider bg-indigo-500 px-2 py-1 rounded shadow-sm">Phase: ${phase}</span><span class="text-[10px] text-slate-400 font-mono">${new Date().toLocaleTimeString()}</span></div>${formatted}</div>`;
+                document.getElementById('editor').scrollTop = document.getElementById('editor').scrollHeight;
+                updateWordCount();
             } else {
-                addChatMessage('system', `❌ Error: ${response.message}`);
+                addChatMessage('system', `❌ Error: ${res.message}`);
             }
         }
 
