@@ -332,7 +332,8 @@
                     // Update UI
                     document.getElementById('record-count').innerText = `${jsonData.length} records`;
                     document.getElementById('data-preview-container').classList.remove('hidden');
-                    renderTablePreview(jsonData.slice(0, 20)); // Preview first 20
+                    // 顯示完整數據，不進行 slice
+                    renderTablePreview(jsonData); 
                     
                     // Upload to Backend
                     const response = await callBackendAPI({
