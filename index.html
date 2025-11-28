@@ -12,7 +12,6 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* 寫作區使用襯線字體，更像論文 */
         .serif-font { font-family: 'Noto Serif TC', serif; }
         
         .glass-panel {
@@ -27,11 +26,20 @@
         .editor-area:focus { outline: none; }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 優化後的文章閱讀樣式 (Typography) --- */
+        .prose h2 { font-size: 1.5em; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.8em; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+        .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.2em; margin-bottom: 0.6em; color: #334155; }
+        .prose p { margin-bottom: 1.2em; line-height: 1.8; text-align: justify; color: #374151; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1.2em; }
+        .prose li { margin-bottom: 0.5em; line-height: 1.6; }
+        .prose strong { color: #0f172a; font-weight: 600; }
+        .prose blockquote { border-left: 4px solid #6366f1; padding-left: 1em; color: #4b5563; font-style: italic; margin-bottom: 1.2em; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex">
 
-    <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20">
+    <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20 transition-all">
         <div class="p-6 border-b border-slate-700">
             <h1 class="text-xl font-bold tracking-wider flex items-center gap-2">
                 <i class="fa-solid fa-graduation-cap text-indigo-400"></i>
@@ -39,15 +47,25 @@
             </h1>
             <p class="text-xs text-slate-400 mt-1">SSCI Q1 Writing Coach</p>
         </div>
+
+        <div class="px-4 pt-4">
+            <div class="relative">
+                <select id="global-lang-selector" onchange="changeUILanguage()" class="w-full bg-slate-800 text-xs text-slate-300 border border-slate-600 rounded px-2 py-1.5 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                    <option value="zh-TW">🌐 繁體中文 (Traditional Chinese)</option>
+                    <option value="en-US">🌐 English (US)</option>
+                </select>
+            </div>
+        </div>
+
         <nav class="flex-1 p-4 space-y-2">
             <button onclick="switchTab('setup')" id="nav-setup" class="nav-item w-full text-left px-4 py-3 rounded-lg bg-indigo-600 text-white transition-all flex items-center gap-3 shadow-lg shadow-indigo-900/50">
-                <i class="fa-solid fa-chess-board w-5 text-center"></i> 1. 主題設定
+                <i class="fa-solid fa-chess-board w-5 text-center"></i> <span data-i18n="nav_setup">1. 主題設定</span>
             </button>
             <button onclick="switchTab('data')" id="nav-data" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300 transition-all flex items-center gap-3">
-                <i class="fa-solid fa-database w-5 text-center"></i> 2. 文獻解析
+                <i class="fa-solid fa-database w-5 text-center"></i> <span data-i18n="nav_data">2. 文獻解析</span>
             </button>
             <button onclick="switchTab('write')" id="nav-write" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300 transition-all flex items-center gap-3">
-                <i class="fa-solid fa-pen-nib w-5 text-center"></i> 3. 結構化寫作
+                <i class="fa-solid fa-pen-nib w-5 text-center"></i> <span data-i18n="nav_write">3. 結構化寫作</span>
             </button>
         </nav>
         <div class="p-4 border-t border-slate-700">
@@ -64,7 +82,7 @@
     <main class="flex-1 relative overflow-hidden flex flex-col">
         
         <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10">
-            <h2 id="page-title" class="text-lg font-semibold text-slate-700">主題設定 (The Topic Orientation)</h2>
+            <h2 id="page-title" class="text-lg font-semibold text-slate-700" data-i18n="title_setup">主題設定</h2>
             <div class="flex gap-3">
                 <span class="text-xs text-slate-400 flex items-center gap-1"><i class="fa-solid fa-circle text-green-500 text-[8px]"></i> System Ready</span>
             </div>
@@ -79,34 +97,34 @@
                             <i class="fa-solid fa-sliders"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-slate-800">研究變項畫布 (Variable Canvas)</h3>
-                            <p class="text-slate-500 text-sm mt-1">清晰定義變項是 SSCI 題目的核心。系統將依此控制 AI 的寫作方向。</p>
+                            <h3 class="text-xl font-bold text-slate-800" data-i18n="setup_canvas_title">研究變項畫布 (Variable Canvas)</h3>
+                            <p class="text-slate-500 text-sm mt-1" data-i18n="setup_canvas_desc">清晰定義變項是 SSCI 題目的核心。系統將依此控制 AI 的寫作方向。</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="space-y-3">
                             <label class="text-sm font-bold text-slate-700 flex justify-between">
-                                自變項 (Independent Variable)
+                                <span data-i18n="setup_iv">自變項 (Independent Variable)</span>
                                 <span class="text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Intervention</span>
                             </label>
-                            <input type="text" id="iv-input" placeholder="例如：生成式 AI 輔助 PBL 教學" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700">
+                            <input type="text" id="iv-input" placeholder="e.g., Generative AI in PBL" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-slate-700">
                         </div>
                         <div class="space-y-3">
                             <label class="text-sm font-bold text-slate-700 flex justify-between">
-                                依變項 (Dependent Variable)
+                                <span data-i18n="setup_dv">依變項 (Dependent Variable)</span>
                                 <span class="text-xs font-normal text-teal-600 bg-teal-50 px-2 py-0.5 rounded">Outcome</span>
                             </label>
-                            <input type="text" id="dv-input" placeholder="例如：學生的批判性思考與論證品質" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700">
+                            <input type="text" id="dv-input" placeholder="e.g., Argumentation Quality" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-slate-700">
                         </div>
                     </div>
                     <div class="mt-8 space-y-3">
-                        <label class="text-sm font-bold text-slate-700">完整研究主題 (Research Topic)</label>
-                        <input type="text" id="topic-input" placeholder="例如：科學教育中的數位學習工具應用效益研究" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700">
+                        <label class="text-sm font-bold text-slate-700" data-i18n="setup_topic">完整研究主題 (Research Topic)</label>
+                        <input type="text" id="topic-input" placeholder="e.g., Effectiveness of Digital Tools in Science Education" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-slate-700">
                     </div>
                 </div>
                 <div class="flex justify-end pt-4">
-                    <button onclick="switchTab('data')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg hover:shadow-indigo-500/30 font-medium flex items-center gap-2">
-                        下一步：上傳文獻 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    <button onclick="switchTab('data')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2">
+                        <span data-i18n="btn_next_data">下一步：上傳文獻</span> <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                     </button>
                 </div>
             </div>
@@ -117,18 +135,18 @@
                         <div class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-file-csv"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-slate-700 group-hover:text-indigo-700">點擊上傳 WoS 文獻資料 (Excel/CSV)</h3>
-                        <p class="text-slate-500 mt-3 max-w-md mx-auto">系統將自動解析：<span class="font-mono text-xs bg-slate-100 px-1 rounded">Authors</span>, <span class="font-mono text-xs bg-slate-100 px-1 rounded">Year</span>, <span class="font-mono text-xs bg-slate-100 px-1 rounded">Title</span>, <span class="font-mono text-xs bg-slate-100 px-1 rounded">Journal</span>, <span class="font-mono text-xs bg-slate-100 px-1 rounded">DOI</span>, <span class="font-mono text-xs bg-slate-100 px-1 rounded">Abstract</span></p>
+                        <h3 class="text-xl font-bold text-slate-700 group-hover:text-indigo-700" data-i18n="data_upload_title">點擊上傳 WoS 文獻資料 (Excel/CSV)</h3>
+                        <p class="text-slate-500 mt-3 max-w-md mx-auto" data-i18n="data_upload_desc">系統將自動解析：Authors, Year, Title, Journal, DOI, Abstract</p>
                         <input type="file" id="file-upload" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
                     </div>
                 </div>
                 <div id="data-preview-container" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
                     <div class="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center shrink-0">
                         <div class="flex items-center gap-2">
-                            <h3 class="font-bold text-slate-700">文獻池預覽</h3>
+                            <h3 class="font-bold text-slate-700" data-i18n="data_preview_title">文獻池預覽</h3>
                             <span class="text-xs font-mono bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full" id="record-count">0 records</span>
                         </div>
-                        <span class="text-xs text-green-600 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> 已同步至雲端</span>
+                        <span class="text-xs text-green-600 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> Cloud Synced</span>
                     </div>
                     <div class="overflow-auto custom-scrollbar flex-1">
                         <table class="w-full text-sm text-left text-slate-600">
@@ -151,7 +169,7 @@
                 </div>
                 <div class="flex justify-end pt-2">
                      <button onclick="switchTab('write')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2">
-                        進入寫作模式 <i class="fa-solid fa-pen-nib group-hover:rotate-12 transition-transform"></i>
+                        <span data-i18n="btn_next_write">進入寫作模式</span> <i class="fa-solid fa-pen-nib group-hover:rotate-12 transition-transform"></i>
                     </button>
                 </div>
             </div>
@@ -163,14 +181,7 @@
                         <div class="p-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white flex flex-col gap-3 shadow-md z-10">
                             <div class="flex justify-between items-center">
                                 <span class="font-bold text-sm tracking-wide"><i class="fa-solid fa-robot mr-2"></i>SSCI AI Coach</span>
-                                
-                                <div class="relative">
-                                    <select id="lang-selector" class="appearance-none bg-indigo-800/50 hover:bg-indigo-800 border border-indigo-400/30 text-white text-[10px] py-1 px-2 pr-6 rounded cursor-pointer focus:outline-none transition-colors">
-                                        <option value="zh-TW">輸出語言：繁體中文</option>
-                                        <option value="en-US">Output: English</option>
-                                    </select>
-                                    <div class="absolute right-1 top-1.5 pointer-events-none text-indigo-300 text-[8px]">▼</div>
-                                </div>
+                                <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white/90">Master Level</span>
                             </div>
 
                             <div class="relative">
@@ -193,8 +204,7 @@
                             <div class="flex gap-3 animate-fade-in">
                                 <div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div>
                                 <div class="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100 leading-relaxed">
-                                    <p>你好！我是你的 SSCI 寫作教練。</p>
-                                    <p class="mt-2 text-slate-500 text-xs">請選擇上方寫作階段，並使用右上角選單切換輸出語言 (繁中/English)。</p>
+                                    <p data-i18n="ai_welcome">你好！我是你的 SSCI 寫作教練。請選擇上方寫作階段，並輸入指令開始。</p>
                                 </div>
                             </div>
                         </div>
@@ -207,7 +217,7 @@
                                 </button>
                             </div>
                             <p class="text-[10px] text-slate-400 mt-2 text-center flex items-center justify-center gap-1">
-                                <i class="fa-solid fa-bolt text-amber-400"></i> Powered by Gemini 1.5 Pro with RAG
+                                <i class="fa-solid fa-bolt text-amber-400"></i> Powered by Gemini 2.0 Flash with RAG
                             </p>
                         </div>
                     </div>
@@ -227,11 +237,11 @@
 
                             <div class="flex-1"></div>
                             <button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium hover:bg-indigo-100 transition-colors">
-                                <i class="fa-solid fa-download mr-1"></i> Export
+                                <i class="fa-solid fa-download mr-1"></i> <span data-i18n="btn_export">Export</span>
                             </button>
                         </div>
                         
-                        <div id="editor" contenteditable="true" oninput="updateWordCount()" class="editor-area flex-1 p-12 text-lg text-slate-800 leading-relaxed overflow-y-auto custom-scrollbar outline-none serif-font">
+                        <div id="editor" contenteditable="true" oninput="updateWordCount()" class="editor-area flex-1 p-12 text-lg text-slate-800 leading-relaxed overflow-y-auto custom-scrollbar outline-none serif-font prose max-w-none">
                             <h1 class="text-3xl font-bold mb-6 text-slate-900 font-sans">Untitled Manuscript</h1>
                             <p class="text-slate-400 italic">在此開始寫作，或等待左側 AI 教練生成內容...</p>
                         </div>
@@ -253,6 +263,46 @@
         let projectInfo = { iv: '', dv: '', topic: '' };
         let isProcessing = false;
 
+        // --- UI Translation Dictionary ---
+        const translations = {
+            'zh-TW': {
+                'nav_setup': '1. 主題設定',
+                'nav_data': '2. 文獻解析',
+                'nav_write': '3. 結構化寫作',
+                'title_setup': '主題設定 (The Topic Orientation)',
+                'setup_canvas_title': '研究變項畫布 (Variable Canvas)',
+                'setup_canvas_desc': '清晰定義變項是 SSCI 題目的核心。系統將依此控制 AI 的寫作方向。',
+                'setup_iv': '自變項 (Independent Variable)',
+                'setup_dv': '依變項 (Dependent Variable)',
+                'setup_topic': '完整研究主題 (Research Topic)',
+                'btn_next_data': '下一步：上傳文獻',
+                'data_upload_title': '點擊上傳 WoS 文獻資料 (Excel/CSV)',
+                'data_upload_desc': '系統將自動解析：Authors, Year, Title, Journal, DOI, Abstract',
+                'data_preview_title': '文獻池預覽',
+                'btn_next_write': '進入寫作模式',
+                'ai_welcome': '你好！我是你的 SSCI 寫作教練。請選擇上方寫作階段，並輸入指令開始。',
+                'btn_export': '匯出'
+            },
+            'en-US': {
+                'nav_setup': '1. Setup',
+                'nav_data': '2. Analysis',
+                'nav_write': '3. Writing',
+                'title_setup': 'Topic Orientation',
+                'setup_canvas_title': 'Variable Canvas',
+                'setup_canvas_desc': 'Define your variables clearly. This guides the AI in generating SSCI-level content.',
+                'setup_iv': 'Independent Variable (IV)',
+                'setup_dv': 'Dependent Variable (DV)',
+                'setup_topic': 'Research Topic',
+                'btn_next_data': 'Next: Upload Data',
+                'data_upload_title': 'Upload WoS Export (Excel/CSV)',
+                'data_upload_desc': 'Auto-parsing: Authors, Year, Title, Journal, DOI, Abstract',
+                'data_preview_title': 'Literature Pool',
+                'btn_next_write': 'Start Writing',
+                'ai_welcome': 'Hello! I am your SSCI Writing Coach. Select a phase above and type a command to start.',
+                'btn_export': 'Export'
+            }
+        };
+
         // --- 1. API Helper ---
         async function callBackendAPI(payload) {
             try {
@@ -264,7 +314,7 @@
                 return await response.json();
             } catch (error) {
                 console.error("API Error:", error);
-                return { status: "error", message: "連線失敗 (API Error)。請檢查網路或 URL。" };
+                return { status: "error", message: "連線失敗 (API Error)。" };
             }
         }
 
@@ -282,13 +332,6 @@
             activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800');
             activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-900/50');
 
-            const titles = {
-                'setup': '主題設定 (The Topic Orientation)',
-                'data': '文獻解析 (Literature Analysis)',
-                'write': '結構化寫作 (Structured Writing)'
-            };
-            document.getElementById('page-title').innerText = titles[tabId];
-
             if (tabId !== 'setup') {
                 const newIv = document.getElementById('iv-input').value;
                 const newDv = document.getElementById('dv-input').value;
@@ -301,41 +344,51 @@
             }
         }
 
-        // --- 3. File Upload ---
+        // --- 3. Language Switcher Logic ---
+        function changeUILanguage() {
+            const lang = document.getElementById('global-lang-selector').value;
+            const texts = translations[lang];
+            
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (texts[key]) el.innerText = texts[key];
+            });
+
+            // Update Placeholder inputs separately
+            if (lang === 'zh-TW') {
+                document.getElementById('ai-input').placeholder = "輸入指令或按 Enter 直接生成...";
+            } else {
+                document.getElementById('ai-input').placeholder = "Enter command or press Enter to generate...";
+            }
+        }
+
+        // --- 4. File Upload & Table ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const uploadZone = document.getElementById('upload-zone');
             const originalContent = uploadZone.innerHTML;
-            uploadZone.innerHTML = `<div class="animate-pulse"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i><h3 class="text-lg font-bold text-slate-700">正在解析並上傳至雲端...</h3></div>`;
+            uploadZone.innerHTML = `<div class="animate-pulse"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i><h3 class="text-lg font-bold text-slate-700">Processing...</h3></div>`;
 
             const reader = new FileReader();
             reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                     
                     literatureData = jsonData;
                     document.getElementById('record-count').innerText = `${jsonData.length} records`;
                     document.getElementById('data-preview-container').classList.remove('hidden');
                     renderTablePreview(jsonData); 
                     
-                    const response = await callBackendAPI({
-                        action: "upload_literature",
-                        data: jsonData
-                    });
-
-                    if (response.status === 'success') {
-                        addChatMessage('system', `✅ 成功上傳 ${jsonData.length} 筆文獻。`);
-                    } else {
-                        addChatMessage('system', `❌ 上傳失敗：${response.message}`);
-                    }
+                    const response = await callBackendAPI({ action: "upload_literature", data: jsonData });
+                    if (response.status === 'success') addChatMessage('system', `✅ Uploaded ${jsonData.length} references.`);
+                    else addChatMessage('system', `❌ Upload Failed: ${response.message}`);
                 } catch (err) {
-                    console.error(err);
-                    alert("檔案解析失敗");
+                    alert("Parsing Error");
                 } finally {
                     uploadZone.innerHTML = originalContent;
                 }
@@ -343,26 +396,23 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // --- 4. Table Rendering ---
         function renderTablePreview(rows) {
             const tbody = document.getElementById('literature-table-body');
             tbody.innerHTML = '';
             rows.forEach((row, index) => {
+                // (Existing table rendering logic...)
                 const authorRaw = row['Author Full Names'] || row['Authors'] || 'Unknown';
                 const authorDisplay = authorRaw.length > 40 ? authorRaw.split(';')[0] + ' et al.' : authorRaw;
                 const year = row['Publication Year'] || row['PY'] || 'N/A';
                 const title = row['Article Title'] || row['TI'] || 'No Title';
                 const journal = row['Source Title'] || row['SO'] || 'Unknown Journal';
-                
                 const volume = row['Volume'] || '';
                 const issue = row['Issue'] || '';
                 let volIssue = volume ? `${volume}` : '';
                 if (issue) volIssue += `(${issue})`;
-
                 let pages = '';
                 if (row['Start Page'] && row['End Page']) pages = `${row['Start Page']}-${row['End Page']}`;
                 else if (row['Article Number']) pages = `Art. ${row['Article Number']}`;
-                
                 const doi = row['DOI'] || '';
                 const abstract = row['Abstract'] || 'No Abstract available.';
                 const keywords = row['Author Keywords'] || '';
@@ -384,7 +434,6 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
-
                 const trDetail = document.createElement('tr');
                 trDetail.id = `detail-${index}`;
                 trDetail.className = 'hidden bg-slate-50/50 border-b border-slate-100 shadow-inner';
@@ -412,40 +461,63 @@
             else row.classList.add('hidden');
         }
 
-        // --- 5. 字數統計邏輯 (Word Count) ---
+        // --- 5. Word Count ---
         function updateWordCount() {
             const editor = document.getElementById('editor');
             const fullText = editor.innerText || "";
-            
-            // 1. 計算全文 (Total)
-            // 簡易計算：英文算單詞，中文算字數
             const totalCount = countWords(fullText);
             document.getElementById('total-word-count').innerText = `Total: ${totalCount}`;
 
-            // 2. 計算目前選定章節 (Phase)
             const currentPhase = document.getElementById('phase-selector').value;
-            // 找出所有標記為該 Phase 的區塊
             const phaseBlocks = editor.querySelectorAll(`div[data-phase="${currentPhase}"]`);
             let phaseText = "";
-            phaseBlocks.forEach(block => {
-                phaseText += block.innerText + " ";
-            });
+            phaseBlocks.forEach(block => phaseText += block.innerText + " ");
             const phaseCount = countWords(phaseText);
             document.getElementById('phase-word-count').innerText = `Phase: ${phaseCount}`;
         }
 
         function countWords(str) {
-            if (!str) return 0;
-            // 移除多餘空白
             const cleanStr = str.trim();
             if (cleanStr === "") return 0;
-            // 簡單正則：中文字或英文字詞
-            // 這裡使用更精確的邏輯：如果有中文字，算字數；純英文算單詞
-            // 簡易版：用空白分割
+            // 中文算字數，英文算單詞
+            if (/[\u4e00-\u9fa5]/.test(cleanStr)) {
+                return cleanStr.replace(/\s+/g, '').length;
+            }
             return cleanStr.split(/\s+/).length; 
         }
 
-        // --- 6. AI Chat & Generation ---
+        // --- 6. AI & Formatting Logic (Text Wall Fix) ---
+        function formatAIOutput(markdown) {
+            // 這是解決文字擠在一起的核心：將 Markdown 轉為帶樣式的 HTML
+            let html = markdown
+                // Headers
+                .replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold mt-6 mb-3 text-slate-700">$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-8 mb-4 pb-2 border-b border-slate-200 text-slate-800">$1</h2>')
+                // Bold
+                .replace(/\*\*(.*?)\*\*/gim, '<strong class="font-bold text-slate-900">$1</strong>')
+                // Italic
+                .replace(/\*(.*?)\*/gim, '<em class="italic">$1</em>')
+                // Lists (Bullet) - 簡單處理，將 * 開頭的行轉為 li
+                .replace(/^\* (.*$)/gim, '<li class="ml-6 list-disc mb-2 pl-1">$1</li>')
+                // Lists (Number) - 簡單處理 1. 開頭
+                .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-2 pl-1">$1</li>');
+
+            // 最重要：處理換行。將連續換行 (\n\n) 視為段落，單一換行 (\n) 視為 <br>
+            // 策略：先用 \n\n 切割成段落陣列
+            let paragraphs = html.split(/\n\n+/);
+            
+            let formattedHtml = paragraphs.map(para => {
+                para = para.trim();
+                if (!para) return '';
+                // 如果段落本身已經是標題或列表，就不包 <p>
+                if (para.startsWith('<h') || para.startsWith('<li')) return para;
+                // 否則包裝成 <p> 並處理內部的單行換行
+                return `<p class="mb-5 leading-relaxed text-justify text-slate-700">${para.replace(/\n/g, '<br>')}</p>`;
+            }).join('');
+
+            return formattedHtml;
+        }
+
         function addChatMessage(role, text) {
             const history = document.getElementById('chat-history');
             const div = document.createElement('div');
@@ -465,7 +537,7 @@
             const inputField = document.getElementById('ai-input');
             const userText = inputField.value.trim();
             const phase = document.getElementById('phase-selector').value;
-            const lang = document.getElementById('lang-selector').value; // 取得語言設定
+            const lang = document.getElementById('global-lang-selector').value;
 
             if (!userText && phase !== 'outline') return; 
 
@@ -478,11 +550,11 @@
             const loadingDiv = document.createElement('div');
             loadingDiv.id = loadingId;
             loadingDiv.className = 'flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse';
-            loadingDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase}, ${lang})...`;
+            loadingDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase})...`;
             history.appendChild(loadingDiv);
             history.scrollTop = history.scrollHeight;
 
-            // 組合 Prompt：加入語言指令
+            // Prompt Construction
             let finalPrompt = userText || "Generate academic content for this phase.";
             if (lang === 'zh-TW') {
                 finalPrompt += " (IMPORTANT: Please output in Traditional Chinese 繁體中文).";
@@ -500,32 +572,27 @@
             isProcessing = false;
 
             if (response.status === 'success') {
-                addChatMessage('system', `✅ **${phase}** 生成完畢。`);
+                addChatMessage('system', `✅ **${phase}** Generated.`);
                 
                 const editor = document.getElementById('editor');
                 const timestamp = new Date().toLocaleTimeString();
                 
-                let htmlContent = response.data
-                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                    .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>');
+                // ★ 使用新的格式化函式解決文字擠在一起的問題 ★
+                let formattedContent = formatAIOutput(response.data);
 
-                // 注意：這裡加上了 data-phase 屬性，讓字數統計功能可以抓到
                 editor.innerHTML += `
-                    <div class="mb-8 animate-fade-in group" data-phase="${phase}">
-                        <div class="flex items-center gap-2 mb-2 border-b border-slate-100 pb-1 select-none">
-                            <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">Phase: ${phase}</span>
-                            <span class="text-[10px] text-slate-300">${timestamp}</span>
+                    <div class="mb-10 animate-fade-in group prose prose-slate max-w-none" data-phase="${phase}">
+                        <div class="flex items-center gap-2 mb-4 border-b-2 border-indigo-50 pb-2 select-none not-prose">
+                            <span class="text-[10px] font-bold text-white uppercase tracking-wider bg-indigo-500 px-2 py-1 rounded shadow-sm">Phase: ${phase}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${timestamp}</span>
                         </div>
-                        <div class="prose prose-slate max-w-none text-slate-800">
-                            ${htmlContent}
-                        </div>
+                        ${formattedContent}
                     </div>
                 `;
                 editor.scrollTop = editor.scrollHeight;
-                updateWordCount(); // 更新字數
+                updateWordCount(); 
             } else {
-                addChatMessage('system', `❌ 生成錯誤：${response.message}`);
+                addChatMessage('system', `❌ Error: ${response.message}`);
             }
         }
 
