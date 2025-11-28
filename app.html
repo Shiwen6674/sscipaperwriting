@@ -251,18 +251,21 @@
     </main>
 
     <script>
-        // CONFIG
+        // ==========================================
+        // CONFIG: 請確認這是您最新的 Web App URL
+        // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxzuSB40CJ_8VgEG5HsZR0QBqShK5TMKQAHHkQf_ww4gGy90uWZUoLjiuwbBpT4BkJoKQ/exec"; 
         
         let literatureData = [];
         let projectInfo = { iv: '', dv: '', topic: '', mediator: '', moderator: '' };
         let isProcessing = false;
 
+        // UI Translations
         const translations = {
             'zh-TW': {
                 'nav_setup': '1. 研究主題設定', 'nav_data': '2. 文獻資料解析', 'nav_write': '3. AI輔助寫作',
                 'title_setup': '研究主題設定 (The Topic Orientation)', 'setup_canvas_title': '研究變項規畫 (Variable Canvas)',
-                'setup_canvas_desc': '清晰釐清研究變項是 SSCI 論文寫作的重要關鍵。系統將依此作為 AI 主要寫作方向。',
+                'setup_canvas_desc': '釐清研究變項是 SSCI 論文寫作的重要關鍵。系統將依此作為 AI 主要寫作方向。',
                 'setup_iv': '自變項 (IV)', 'setup_dv': '依變項 (DV)', 'setup_topic': '研究主題或方向',
                 'setup_advanced': '進階變項設定 (中介變項/調節變項)', 'setup_mediator': '中介變項 (Mediator)', 'setup_moderator': '調節變項 (Moderator)',
                 'btn_next_data': '下一步：上傳文獻', 'data_upload_title': '點擊上傳 WoS 文獻資料',
@@ -295,43 +298,33 @@
             }
         }
 
-        // --- 1. API Helper (With Retry Logic) ---
+        // --- 1. API Helper with Error Handling ---
         async function callBackendAPI(payload) {
-            const maxRetries = 3; // 最多重試 3 次
+            const maxRetries = 3; 
             let attempt = 0;
             
             while (attempt < maxRetries) {
                 try {
                     const response = await fetch(GAS_API_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload),
+                        method: "POST", body: JSON.stringify(payload),
                         headers: { "Content-Type": "text/plain;charset=utf-8" } 
                     });
-                    
                     const json = await response.json();
                     
-                    // 如果後端回傳錯誤，且錯誤訊息包含 Resource exhausted，則視為需要重試
-                    if (json.status === 'error' && json.message.includes('Resource exhausted')) {
+                    if (json.status === 'error' && json.message && json.message.includes('Resource exhausted')) {
                         throw new Error("QuotaLimit");
                     }
-                    
-                    return json; // 成功回傳
-                    
+                    return json;
                 } catch (error) {
                     attempt++;
                     console.warn(`API Attempt ${attempt} failed:`, error);
-                    
-                    if (attempt >= maxRetries) {
-                        return { status: "error", message: "系統忙碌中 (Resource Exhausted)，請稍後再試。" };
-                    }
-                    
-                    // 等待時間：第一次 2秒，第二次 4秒，第三次 8秒 (指數退避)
-                    const waitTime = 2000 * Math.pow(2, attempt - 1);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    if (attempt >= maxRetries) return { status: "error", message: "連線失敗或系統忙碌，請稍後再試。" };
+                    await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, attempt - 1)));
                 }
             }
         }
 
+        // --- 2. Tab Logic ---
         async function switchTab(tabId) {
             ['setup', 'data', 'write'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.add('hidden');
@@ -350,8 +343,8 @@
                     iv: document.getElementById('iv-input').value,
                     dv: document.getElementById('dv-input').value,
                     topic: document.getElementById('topic-input').value,
-                    mediator: document.getElementById('mediator-input').value, // NEW
-                    moderator: document.getElementById('moderator-input').value // NEW
+                    mediator: document.getElementById('mediator-input').value,
+                    moderator: document.getElementById('moderator-input').value
                 };
                 if (JSON.stringify(newInfo) !== JSON.stringify(projectInfo)) {
                     projectInfo = newInfo;
@@ -370,6 +363,7 @@
             document.getElementById('ai-input').placeholder = lang === 'zh-TW' ? "輸入指令..." : "Enter command...";
         }
 
+        // --- 3. File Upload ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -434,7 +428,10 @@
             row.classList.toggle('hidden');
         }
 
+        // --- 4. Formatter Logic (Optimized for Display) ---
         function formatAIOutput(markdown) {
+            if (!markdown) return ""; 
+
             let formatted = markdown
                 .replace(/(^|\n)(期刊適配性分析|Journal Fit Analysis)/g, '\n\n### $2')
                 .replace(/(^|\n)(Phase \d+[:：]?\s*論文大綱|Outline)/g, '\n\n### $2')
@@ -456,6 +453,7 @@
                 .replace(/^\* (.*$)/gim, '<li class="ml-6 list-disc mb-2 pl-1">$1</li>')
                 .replace(/^\d+\. (.*$)/gim, '<li class="ml-6 list-decimal mb-2 pl-1">$1</li>');
 
+            // Fix: 確保段落正確換行
             return html.split(/\n\n+/).map(para => {
                 para = para.trim();
                 if (!para) return '';
@@ -485,6 +483,7 @@
             document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
         }
 
+        // --- 5. Main AI Logic (Fixed Empty Generation) ---
         async function simulateAIGeneration() {
             if (isProcessing) return;
 
@@ -493,44 +492,63 @@
             const phase = document.getElementById('phase-selector').value;
             const lang = document.getElementById('global-lang-selector').value;
 
-            // ★ 修改處 1：移除了「若沒輸入文字且不是 Outline 就停止」的限制代碼
-            // 原本是: if (!text && phase !== 'outline') return;  <-- 這行被我刪掉了
+            // Fix: 自動填入指令，不因空字串而停止
+            let prompt = text;
+            if (!prompt) {
+                prompt = phase === 'outline' 
+                    ? "Generate detailed academic outline." 
+                    : "Generate detailed academic content for this phase based on setup.";
+            }
 
             isProcessing = true;
-            
-            // 只有當使用者真的有打字時，才顯示使用者的對話框
-            if (text) {
-                addChatMessage('user', text);
-            }
-            
+            if (text) addChatMessage('user', text);
             input.value = '';
 
-            const loading = document.createElement('div');
-            loading.innerHTML = `<div class="flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase})...</div>`;
-            document.getElementById('chat-history').appendChild(loading);
+            const loadingId = 'loading-' + Date.now();
+            const history = document.getElementById('chat-history');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse';
+            loadingDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase})...`;
+            history.appendChild(loadingDiv);
+            history.scrollTop = history.scrollHeight;
 
-            // ★ 修改處 2：如果沒輸入文字，自動帶入預設指令
-            let prompt = text || "Generate academic content for this phase based on the research topic and literature.";
-            
-            // 加上語言控制
             prompt += lang === 'zh-TW' ? " (Output in Traditional Chinese)." : " (Output in English).";
 
-       // ... (前略)
             const res = await callBackendAPI({ action: "generate_content", phase: phase, user_prompt: prompt });
-            loading.remove();
+            
+            document.getElementById(loadingId).remove();
             isProcessing = false;
 
             if (res.status === 'success') {
-                // ... (成功邏輯不變)
                 addChatMessage('system', `✅ **${phase}** Generated.`);
-                // ...
-            } else {
-                // 優化錯誤顯示
-                let errorMsg = res.message;
-                if (errorMsg.includes("Resource exhausted")) {
-                    errorMsg = "⚠️ AI 正在休息中 (配額已滿)，請等待約 1 分鐘後再試。";
+                
+                // ★ FIX: 檢查資料是否存在，若空則報錯
+                if (!res.data || res.data.trim() === "") {
+                    addChatMessage('system', `⚠️ Warning: Received empty content from AI.`);
+                    return;
                 }
-                addChatMessage('system', `❌ Error: ${errorMsg}`);
+
+                const formatted = formatAIOutput(res.data);
+                const editor = document.getElementById('editor');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                editor.innerHTML += `
+                    <div class="mb-10 animate-fade-in group prose prose-slate max-w-none" data-phase="${phase}">
+                        <div class="flex items-center gap-2 mb-4 border-b-2 border-indigo-50 pb-2 select-none not-prose">
+                            <span class="text-[10px] font-bold text-white uppercase tracking-wider bg-indigo-500 px-2 py-1 rounded shadow-sm">Phase: ${phase}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${timestamp}</span>
+                        </div>
+                        ${formatted}
+                    </div>
+                `;
+                editor.scrollTop = editor.scrollHeight;
+                updateWordCount();
+            } else {
+                // Error Handling
+                let msg = res.message;
+                if (msg && msg.includes('Resource exhausted')) msg = "AI 額度已滿，請稍候再試。";
+                addChatMessage('system', `❌ Error: ${msg}`);
             }
         }
 
