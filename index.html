@@ -287,28 +287,101 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function renderTablePreview(rows) {
-            const tbody = document.getElementById('literature-table-body');
-            tbody.innerHTML = '';
-            
-            rows.forEach(row => {
-                // Try to find standard columns (adapt based on WoS export)
-                const author = row['Authors'] || row['Author Full Names'] || 'Unknown';
-                const year = row['Publication Year'] || row['Year'] || 'N/A';
-                const title = row['Article Title'] || row['Title'] || 'No Title';
-                const abstract = row['Abstract'] || 'No Abstract';
-                
-                const tr = document.createElement('tr');
-                tr.className = 'bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors';
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-slate-900 truncate max-w-xs">${author}</td>
-                    <td class="px-6 py-4">${year}</td>
-                    <td class="px-6 py-4 truncate max-w-xs" title="${title}">${title}</td>
-                    <td class="px-6 py-4 truncate max-w-xs text-xs text-slate-500">${abstract.substring(0, 50)}...</td>
-                `;
-                tbody.appendChild(tr);
-            });
+// --- 將這段 JavaScript 替換原本 index.html 中的對應部分 ---
+
+// ... 前面的 handleFileUpload 函數保持不變 ...
+
+// --- 核心修改：針對 WoS Excel 欄位的精準渲染邏輯 ---
+function renderTablePreview(rows) {
+    const tbody = document.getElementById('literature-table-body');
+    tbody.innerHTML = '';
+    
+    rows.forEach((row, index) => {
+        // 1. 精準解析 WoS 欄位 (Mapping User's WoS Export Headers)
+        
+        // 作者：優先抓 Author Full Names (較完整)，沒有則抓 Authors
+        const authorRaw = row['Author Full Names'] || row['Authors'] || 'Unknown Author';
+        // 簡單處理：如果作者太多，只顯示第一位 + et al. (僅用於預覽，AI 會讀取全部)
+        const authorDisplay = authorRaw.length > 50 ? authorRaw.split(';')[0] + ' et al.' : authorRaw;
+
+        const year = row['Publication Year'] || 'N/A';
+        const title = row['Article Title'] || 'No Title';
+        const journal = row['Source Title'] || 'Unknown Journal'; // 對應 WoS 的 Source Title
+        
+        // APA 格式細節欄位
+        const volume = row['Volume'] || '';
+        const issue = row['Issue'] || '';
+        
+        // 頁碼處理：有些期刊是 Start Page - End Page，有些是 Article Number
+        let pages = '';
+        if (row['Start Page'] && row['End Page']) {
+            pages = `${row['Start Page']}-${row['End Page']}`;
+        } else if (row['Article Number']) {
+            pages = `Art. ${row['Article Number']}`;
         }
+
+        const doi = row['DOI'] || '';
+        
+        // 摘要與關鍵字 (給 AI 用的 Context)
+        const abstract = row['Abstract'] || 'No Abstract available.';
+        const keywords = row['Author Keywords'] || '';
+
+        // 2. 建立主要列 (Main Row)
+        const tr = document.createElement('tr');
+        tr.className = 'bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer group';
+        tr.onclick = () => toggleDetails(index); 
+        tr.innerHTML = `
+            <td class="px-4 py-3 font-medium text-slate-900 truncate max-w-[150px]" title="${authorRaw}">
+                ${authorDisplay}
+            </td>
+            <td class="px-4 py-3 text-slate-600">${year}</td>
+            <td class="px-4 py-3 truncate max-w-[240px] font-medium text-slate-800" title="${title}">
+                ${title}
+            </td>
+            <td class="px-4 py-3 truncate max-w-[180px] text-indigo-600 italic" title="${journal}">
+                ${journal}
+            </td>
+            <td class="px-4 py-3 text-center">
+                <button class="text-xs bg-slate-100 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 px-3 py-1 rounded-full transition-colors duration-200">
+                    <i class="fa-solid fa-chevron-down" id="icon-${index}"></i> 詳情
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // 3. 建立詳情列 (Detail Row - Hidden by default)
+        const trDetail = document.createElement('tr');
+        trDetail.id = `detail-${index}`;
+        trDetail.className = 'hidden bg-slate-50 border-b border-slate-200 shadow-inner';
+        trDetail.innerHTML = `
+            <td colspan="5" class="p-5">
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <span class="px-2 py-1 bg-white border border-slate-200 rounded text-slate-600">
+                            <strong>Vol:</strong> ${volume}
+                        </span>
+                        <span class="px-2 py-1 bg-white border border-slate-200 rounded text-slate-600">
+                            <strong>Issue:</strong> ${issue}
+                        </span>
+                        <span class="px-2 py-1 bg-white border border-slate-200 rounded text-slate-600">
+                            <strong>Pages:</strong> ${pages}
+                        </span>
+                        ${doi ? `<a href="https://doi.org/${doi}" target="_blank" class="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-blue-600 hover:underline"><strong>DOI:</strong> ${doi}</a>` : ''}
+                        ${keywords ? `<span class="px-2 py-1 bg-amber-50 border border-amber-100 rounded text-amber-700 truncate max-w-md" title="${keywords}"><strong>Keywords:</strong> ${keywords}</span>` : ''}
+                    </div>
+
+                    <div class="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded border border-slate-200">
+                        <div class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-align-left text-indigo-500"></i> Abstract
+                        </div>
+                        ${abstract}
+                    </div>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(trDetail);
+    });
+}
 
         // 3. AI Simulation Logic (Backend Interface)
         function addChatMessage(role, text) {
