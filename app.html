@@ -460,21 +460,32 @@
 
         async function simulateAIGeneration() {
             if (isProcessing) return;
+
             const input = document.getElementById('ai-input');
             const text = input.value.trim();
             const phase = document.getElementById('phase-selector').value;
             const lang = document.getElementById('global-lang-selector').value;
 
-            if (!text && phase !== 'outline') return;
+            // ★ 修改處 1：移除了「若沒輸入文字且不是 Outline 就停止」的限制代碼
+            // 原本是: if (!text && phase !== 'outline') return;  <-- 這行被我刪掉了
+
             isProcessing = true;
-            if (text) addChatMessage('user', text);
+            
+            // 只有當使用者真的有打字時，才顯示使用者的對話框
+            if (text) {
+                addChatMessage('user', text);
+            }
+            
             input.value = '';
 
             const loading = document.createElement('div');
             loading.innerHTML = `<div class="flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase})...</div>`;
             document.getElementById('chat-history').appendChild(loading);
 
-            let prompt = text || "Generate content.";
+            // ★ 修改處 2：如果沒輸入文字，自動帶入預設指令
+            let prompt = text || "Generate academic content for this phase based on the research topic and literature.";
+            
+            // 加上語言控制
             prompt += lang === 'zh-TW' ? " (Output in Traditional Chinese)." : " (Output in English).";
 
             const res = await callBackendAPI({ action: "generate_content", phase: phase, user_prompt: prompt });
