@@ -6,32 +6,27 @@
     <title>ScholarCraft | SSCI 論文寫作輔助工具</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* 玻璃擬態效果 */
+        /* 寫作區使用襯線字體，更像論文 */
+        .serif-font { font-family: 'Noto Serif TC', serif; }
+        
         .glass-panel {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(226, 232, 240, 0.8);
         }
-        /* 優化捲軸顯示 */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
-        
-        /* 寫作區專注樣式 */
         .editor-area:focus { outline: none; }
-        
-        /* 動畫 */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex">
@@ -44,7 +39,6 @@
             </h1>
             <p class="text-xs text-slate-400 mt-1">SSCI Q1 Writing Coach</p>
         </div>
-
         <nav class="flex-1 p-4 space-y-2">
             <button onclick="switchTab('setup')" id="nav-setup" class="nav-item w-full text-left px-4 py-3 rounded-lg bg-indigo-600 text-white transition-all flex items-center gap-3 shadow-lg shadow-indigo-900/50">
                 <i class="fa-solid fa-chess-board w-5 text-center"></i> 1. 主題設定
@@ -56,7 +50,6 @@
                 <i class="fa-solid fa-pen-nib w-5 text-center"></i> 3. 結構化寫作
             </button>
         </nav>
-
         <div class="p-4 border-t border-slate-700">
             <div class="flex items-center gap-3 px-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-xs shadow-md">U</div>
@@ -90,7 +83,6 @@
                             <p class="text-slate-500 text-sm mt-1">清晰定義變項是 SSCI 題目的核心。系統將依此控制 AI 的寫作方向。</p>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="space-y-3">
                             <label class="text-sm font-bold text-slate-700 flex justify-between">
@@ -107,13 +99,11 @@
                             <input type="text" id="dv-input" placeholder="例如：學生的批判性思考與論證品質" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700">
                         </div>
                     </div>
-                    
                     <div class="mt-8 space-y-3">
                         <label class="text-sm font-bold text-slate-700">完整研究主題 (Research Topic)</label>
                         <input type="text" id="topic-input" placeholder="例如：科學教育中的數位學習工具應用效益研究" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700">
                     </div>
                 </div>
-
                 <div class="flex justify-end pt-4">
                     <button onclick="switchTab('data')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg hover:shadow-indigo-500/30 font-medium flex items-center gap-2">
                         下一步：上傳文獻 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
@@ -132,7 +122,6 @@
                         <input type="file" id="file-upload" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
                     </div>
                 </div>
-
                 <div id="data-preview-container" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
                     <div class="p-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center shrink-0">
                         <div class="flex items-center gap-2">
@@ -156,12 +145,10 @@
                                     <th class="px-4 py-4 font-semibold text-center w-20">Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="literature-table-body" class="divide-y divide-slate-100">
-                                </tbody>
+                            <tbody id="literature-table-body" class="divide-y divide-slate-100"></tbody>
                         </table>
                     </div>
                 </div>
-                
                 <div class="flex justify-end pt-2">
                      <button onclick="switchTab('write')" class="group px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg font-medium flex items-center gap-2">
                         進入寫作模式 <i class="fa-solid fa-pen-nib group-hover:rotate-12 transition-transform"></i>
@@ -176,10 +163,18 @@
                         <div class="p-4 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white flex flex-col gap-3 shadow-md z-10">
                             <div class="flex justify-between items-center">
                                 <span class="font-bold text-sm tracking-wide"><i class="fa-solid fa-robot mr-2"></i>SSCI AI Coach</span>
-                                <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white/90">Master Level</span>
+                                
+                                <div class="relative">
+                                    <select id="lang-selector" class="appearance-none bg-indigo-800/50 hover:bg-indigo-800 border border-indigo-400/30 text-white text-[10px] py-1 px-2 pr-6 rounded cursor-pointer focus:outline-none transition-colors">
+                                        <option value="zh-TW">輸出語言：繁體中文</option>
+                                        <option value="en-US">Output: English</option>
+                                    </select>
+                                    <div class="absolute right-1 top-1.5 pointer-events-none text-indigo-300 text-[8px]">▼</div>
+                                </div>
                             </div>
+
                             <div class="relative">
-                                <select id="phase-selector" class="w-full text-xs text-slate-800 bg-white rounded-lg pl-3 pr-8 py-2.5 outline-none font-medium appearance-none shadow-sm cursor-pointer hover:bg-indigo-50 transition-colors">
+                                <select id="phase-selector" onchange="updateWordCount()" class="w-full text-xs text-slate-800 bg-white rounded-lg pl-3 pr-8 py-2.5 outline-none font-medium appearance-none shadow-sm cursor-pointer hover:bg-indigo-50 transition-colors">
                                     <option value="outline">Phase 0: 大綱生成 (Outline)</option>
                                     <option value="title">Phase 1: 題目策略 (Title)</option>
                                     <option value="abstract">Phase 2: 摘要 (Abstract)</option>
@@ -199,7 +194,7 @@
                                 <div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div>
                                 <div class="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100 leading-relaxed">
                                     <p>你好！我是你的 SSCI 寫作教練。</p>
-                                    <p class="mt-2 text-slate-500 text-xs">我已準備好讀取文獻資料庫。請選擇上方的寫作階段 (Phase)，並輸入指令開始。</p>
+                                    <p class="mt-2 text-slate-500 text-xs">請選擇上方寫作階段，並使用右上角選單切換輸出語言 (繁中/English)。</p>
                                 </div>
                             </div>
                         </div>
@@ -223,16 +218,21 @@
                             <button class="p-2 hover:bg-white hover:shadow-sm hover:text-indigo-600 rounded transition-all" title="Italic"><i class="fa-solid fa-italic"></i></button>
                             <button class="p-2 hover:bg-white hover:shadow-sm hover:text-indigo-600 rounded transition-all" title="List"><i class="fa-solid fa-list-ul"></i></button>
                             <div class="h-4 w-px bg-slate-300 mx-2"></div>
-                            <button class="p-2 hover:bg-white hover:shadow-sm hover:text-indigo-600 rounded text-xs font-bold font-serif">H1</button>
-                            <button class="p-2 hover:bg-white hover:shadow-sm hover:text-indigo-600 rounded text-xs font-bold font-serif">H2</button>
+                            
+                            <div class="flex items-center gap-3 px-2 text-xs font-mono bg-white border border-slate-200 rounded-md py-1 shadow-sm">
+                                <span class="text-indigo-600 font-bold" id="phase-word-count">Phase: 0</span>
+                                <span class="text-slate-300">|</span>
+                                <span class="text-slate-600" id="total-word-count">Total: 0</span>
+                            </div>
+
                             <div class="flex-1"></div>
                             <button class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs rounded-full font-medium hover:bg-indigo-100 transition-colors">
                                 <i class="fa-solid fa-download mr-1"></i> Export
                             </button>
                         </div>
                         
-                        <div id="editor" contenteditable="true" class="editor-area flex-1 p-10 text-lg text-slate-800 leading-relaxed overflow-y-auto custom-scrollbar outline-none font-serif">
-                            <h1 class="text-3xl font-bold mb-6 text-slate-900">Untitled Manuscript</h1>
+                        <div id="editor" contenteditable="true" oninput="updateWordCount()" class="editor-area flex-1 p-12 text-lg text-slate-800 leading-relaxed overflow-y-auto custom-scrollbar outline-none serif-font">
+                            <h1 class="text-3xl font-bold mb-6 text-slate-900 font-sans">Untitled Manuscript</h1>
                             <p class="text-slate-400 italic">在此開始寫作，或等待左側 AI 教練生成內容...</p>
                         </div>
                     </div>
@@ -245,29 +245,23 @@
 
     <script>
         // ==========================================
-        // CONFIGURATION: 您的 Google Apps Script URL
+        // CONFIGURATION
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxzuSB40CJ_8VgEG5HsZR0QBqShK5TMKQAHHkQf_ww4gGy90uWZUoLjiuwbBpT4BkJoKQ/exec"; 
-        // ⬆️ 請務必替換為您自己的 Web App URL
-
-        // Global State
+        
         let literatureData = [];
         let projectInfo = { iv: '', dv: '', topic: '' };
         let isProcessing = false;
 
-        // --- 1. API Helper (Real Fetch) ---
+        // --- 1. API Helper ---
         async function callBackendAPI(payload) {
             try {
-                // 使用 fetch 發送 POST 請求至 GAS
-                // GAS 需要 text/plain 以避免 CORS 預檢 (Simple Request)
                 const response = await fetch(GAS_API_URL, {
                     method: "POST",
                     body: JSON.stringify(payload),
                     headers: { "Content-Type": "text/plain;charset=utf-8" } 
                 });
-                
-                const json = await response.json();
-                return json;
+                return await response.json();
             } catch (error) {
                 console.error("API Error:", error);
                 return { status: "error", message: "連線失敗 (API Error)。請檢查網路或 URL。" };
@@ -276,7 +270,6 @@
 
         // --- 2. Tab Navigation & Auto-save ---
         async function switchTab(tabId) {
-            // UI Update
             ['setup', 'data', 'write'].forEach(id => {
                 document.getElementById(`view-${id}`).classList.add('hidden');
                 const navBtn = document.getElementById(`nav-${id}`);
@@ -289,7 +282,6 @@
             activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800');
             activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg', 'shadow-indigo-900/50');
 
-            // Header Title Update
             const titles = {
                 'setup': '主題設定 (The Topic Orientation)',
                 'data': '文獻解析 (Literature Analysis)',
@@ -297,7 +289,6 @@
             };
             document.getElementById('page-title').innerText = titles[tabId];
 
-            // Auto-Save Logic (When leaving Setup)
             if (tabId !== 'setup') {
                 const newIv = document.getElementById('iv-input').value;
                 const newDv = document.getElementById('dv-input').value;
@@ -305,19 +296,16 @@
 
                 if (newIv !== projectInfo.iv || newDv !== projectInfo.dv || newTopic !== projectInfo.topic) {
                     projectInfo = { iv: newIv, dv: newDv, topic: newTopic };
-                    console.log("Auto-saving settings...");
-                    // Fire and forget save
                     callBackendAPI({ action: "save_settings", data: projectInfo });
                 }
             }
         }
 
-        // --- 3. File Upload & WoS Parsing ---
+        // --- 3. File Upload ---
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // Loading UI
             const uploadZone = document.getElementById('upload-zone');
             const originalContent = uploadZone.innerHTML;
             uploadZone.innerHTML = `<div class="animate-pulse"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i><h3 class="text-lg font-bold text-slate-700">正在解析並上傳至雲端...</h3></div>`;
@@ -331,56 +319,46 @@
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);
                     
                     literatureData = jsonData;
-
-                    // Update UI
                     document.getElementById('record-count').innerText = `${jsonData.length} records`;
                     document.getElementById('data-preview-container').classList.remove('hidden');
-                    // 顯示完整數據，不進行 slice
                     renderTablePreview(jsonData); 
                     
-                    // Upload to Backend
                     const response = await callBackendAPI({
                         action: "upload_literature",
                         data: jsonData
                     });
 
                     if (response.status === 'success') {
-                        addChatMessage('system', `✅ 成功上傳 ${jsonData.length} 筆文獻。期刊品質與 Citation Keys 已建立完畢。`);
+                        addChatMessage('system', `✅ 成功上傳 ${jsonData.length} 筆文獻。`);
                     } else {
                         addChatMessage('system', `❌ 上傳失敗：${response.message}`);
                     }
-
                 } catch (err) {
                     console.error(err);
-                    alert("檔案解析失敗，請確認是否為標準 Excel/CSV 格式。");
+                    alert("檔案解析失敗");
                 } finally {
-                    uploadZone.innerHTML = originalContent; // Restore UI
+                    uploadZone.innerHTML = originalContent;
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // --- 4. Table Rendering (WoS Logic) ---
+        // --- 4. Table Rendering ---
         function renderTablePreview(rows) {
             const tbody = document.getElementById('literature-table-body');
             tbody.innerHTML = '';
-            
             rows.forEach((row, index) => {
-                // WoS Parsing Mapping
                 const authorRaw = row['Author Full Names'] || row['Authors'] || 'Unknown';
                 const authorDisplay = authorRaw.length > 40 ? authorRaw.split(';')[0] + ' et al.' : authorRaw;
                 const year = row['Publication Year'] || row['PY'] || 'N/A';
                 const title = row['Article Title'] || row['TI'] || 'No Title';
                 const journal = row['Source Title'] || row['SO'] || 'Unknown Journal';
                 
-                // Meta Details & New Columns Data Preparation
                 const volume = row['Volume'] || '';
                 const issue = row['Issue'] || '';
-                // 格式化卷期：19(4)
                 let volIssue = volume ? `${volume}` : '';
                 if (issue) volIssue += `(${issue})`;
 
-                // 格式化頁碼
                 let pages = '';
                 if (row['Start Page'] && row['End Page']) pages = `${row['Start Page']}-${row['End Page']}`;
                 else if (row['Article Number']) pages = `Art. ${row['Article Number']}`;
@@ -389,7 +367,6 @@
                 const abstract = row['Abstract'] || 'No Abstract available.';
                 const keywords = row['Author Keywords'] || '';
 
-                // Row HTML - Updated with new columns
                 const tr = document.createElement('tr');
                 tr.className = 'bg-white border-b border-slate-50 hover:bg-indigo-50/30 transition-colors cursor-pointer group';
                 tr.onclick = () => toggleDetails(index); 
@@ -399,20 +376,15 @@
                     <td class="px-4 py-4 text-slate-500">${year}</td>
                     <td class="px-4 py-4 truncate max-w-[200px] font-medium text-slate-700 group-hover:text-indigo-700 transition-colors" title="${title}">${title}</td>
                     <td class="px-4 py-4 truncate max-w-[150px] text-indigo-600 italic font-serif" title="${journal}">${journal}</td>
-                    
                     <td class="px-4 py-4 text-slate-600 whitespace-nowrap">${volIssue}</td>
                     <td class="px-4 py-4 text-slate-600 whitespace-nowrap">${pages}</td>
                     <td class="px-4 py-4 text-slate-600 truncate max-w-[150px]" title="${doi}">${doi}</td>
-
                     <td class="px-4 py-4 text-center">
-                        <button class="text-xs bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-indigo-600 group-hover:shadow-sm px-3 py-1.5 rounded-full transition-all">
-                            <i class="fa-solid fa-chevron-down" id="icon-${index}"></i> Detail
-                        </button>
+                        <button class="text-xs bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-indigo-600 group-hover:shadow-sm px-3 py-1.5 rounded-full transition-all">Detail</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
 
-                // Detail Row HTML - Colspan updated to 9
                 const trDetail = document.createElement('tr');
                 trDetail.id = `detail-${index}`;
                 trDetail.className = 'hidden bg-slate-50/50 border-b border-slate-100 shadow-inner';
@@ -420,7 +392,7 @@
                     <td colspan="9" class="p-6">
                         <div class="flex flex-col gap-4">
                             <div class="flex flex-wrap gap-2 text-xs font-mono">
-                                ${doi ? `<a href="https://doi.org/${doi}" target="_blank" class="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-600 hover:underline">DOI Link: ${doi}</a>` : ''}
+                                ${doi ? `<a href="https://doi.org/${doi}" target="_blank" class="px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-600 hover:underline">DOI: ${doi}</a>` : ''}
                                 ${keywords ? `<span class="px-2 py-1 bg-amber-50 border border-amber-200 rounded text-amber-700">Keywords: ${keywords}</span>` : ''}
                             </div>
                             <div class="text-sm text-slate-700 leading-relaxed bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -436,31 +408,52 @@
 
         function toggleDetails(index) {
             const row = document.getElementById(`detail-${index}`);
-            const icon = document.getElementById(`icon-${index}`);
-            if (row.classList.contains('hidden')) {
-                row.classList.remove('hidden');
-                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
-            } else {
-                row.classList.add('hidden');
-                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
-            }
+            if (row.classList.contains('hidden')) row.classList.remove('hidden');
+            else row.classList.add('hidden');
         }
 
-        // --- 5. AI Chat & Generation Logic ---
+        // --- 5. 字數統計邏輯 (Word Count) ---
+        function updateWordCount() {
+            const editor = document.getElementById('editor');
+            const fullText = editor.innerText || "";
+            
+            // 1. 計算全文 (Total)
+            // 簡易計算：英文算單詞，中文算字數
+            const totalCount = countWords(fullText);
+            document.getElementById('total-word-count').innerText = `Total: ${totalCount}`;
+
+            // 2. 計算目前選定章節 (Phase)
+            const currentPhase = document.getElementById('phase-selector').value;
+            // 找出所有標記為該 Phase 的區塊
+            const phaseBlocks = editor.querySelectorAll(`div[data-phase="${currentPhase}"]`);
+            let phaseText = "";
+            phaseBlocks.forEach(block => {
+                phaseText += block.innerText + " ";
+            });
+            const phaseCount = countWords(phaseText);
+            document.getElementById('phase-word-count').innerText = `Phase: ${phaseCount}`;
+        }
+
+        function countWords(str) {
+            if (!str) return 0;
+            // 移除多餘空白
+            const cleanStr = str.trim();
+            if (cleanStr === "") return 0;
+            // 簡單正則：中文字或英文字詞
+            // 這裡使用更精確的邏輯：如果有中文字，算字數；純英文算單詞
+            // 簡易版：用空白分割
+            return cleanStr.split(/\s+/).length; 
+        }
+
+        // --- 6. AI Chat & Generation ---
         function addChatMessage(role, text) {
             const history = document.getElementById('chat-history');
             const div = document.createElement('div');
             div.className = 'flex gap-3 animate-fade-in';
-            
             if (role === 'system') {
-                div.innerHTML = `
-                    <div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div>
-                    <div class="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100 leading-relaxed"><p>${text.replace(/\n/g, '<br>')}</p></div>`;
+                div.innerHTML = `<div class="w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 flex-shrink-0 flex items-center justify-center shadow-sm"><i class="fa-solid fa-robot"></i></div><div class="bg-white p-3.5 rounded-2xl rounded-tl-none shadow-sm text-sm text-slate-700 border border-slate-100 leading-relaxed"><p>${text.replace(/\n/g, '<br>')}</p></div>`;
             } else {
-                div.innerHTML = `
-                    <div class="flex-1"></div>
-                    <div class="bg-indigo-600 p-3.5 rounded-2xl rounded-tr-none shadow-sm text-sm text-white max-w-[85%] leading-relaxed"><p>${text}</p></div>
-                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex-shrink-0 flex items-center justify-center font-bold text-xs">U</div>`;
+                div.innerHTML = `<div class="flex-1"></div><div class="bg-indigo-600 p-3.5 rounded-2xl rounded-tr-none shadow-sm text-sm text-white max-w-[85%] leading-relaxed"><p>${text}</p></div><div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex-shrink-0 flex items-center justify-center font-bold text-xs">U</div>`;
             }
             history.appendChild(div);
             history.scrollTop = history.scrollHeight;
@@ -472,52 +465,55 @@
             const inputField = document.getElementById('ai-input');
             const userText = inputField.value.trim();
             const phase = document.getElementById('phase-selector').value;
+            const lang = document.getElementById('lang-selector').value; // 取得語言設定
 
-            // Allow empty prompt for Phase 0 or specific auto-generations
             if (!userText && phase !== 'outline') return; 
 
-            // UI Update
             isProcessing = true;
             if (userText) addChatMessage('user', userText);
             inputField.value = '';
 
-            // Loading State
             const loadingId = 'loading-' + Date.now();
             const history = document.getElementById('chat-history');
             const loadingDiv = document.createElement('div');
             loadingDiv.id = loadingId;
             loadingDiv.className = 'flex gap-3 items-center text-slate-400 text-xs ml-12 my-2 animate-pulse';
-            loadingDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (Phase: ${phase})...`;
+            loadingDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini Thinking (${phase}, ${lang})...`;
             history.appendChild(loadingDiv);
             history.scrollTop = history.scrollHeight;
 
-            // Call API
+            // 組合 Prompt：加入語言指令
+            let finalPrompt = userText || "Generate academic content for this phase.";
+            if (lang === 'zh-TW') {
+                finalPrompt += " (IMPORTANT: Please output in Traditional Chinese 繁體中文).";
+            } else {
+                finalPrompt += " (IMPORTANT: Please output in English).";
+            }
+
             const response = await callBackendAPI({
                 action: "generate_content",
                 phase: phase,
-                user_prompt: userText || "Generate academic content for this phase."
+                user_prompt: finalPrompt
             });
 
-            // Handle Response
             document.getElementById(loadingId).remove();
             isProcessing = false;
 
             if (response.status === 'success') {
-                addChatMessage('system', `✅ **${phase}** 生成完畢。\n內容已插入右側編輯器。`);
+                addChatMessage('system', `✅ **${phase}** 生成完畢。`);
                 
-                // Append to Editor
                 const editor = document.getElementById('editor');
                 const timestamp = new Date().toLocaleTimeString();
                 
-                // Format markdown headers to HTML (Simple conversion)
                 let htmlContent = response.data
                     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
                     .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>');
 
+                // 注意：這裡加上了 data-phase 屬性，讓字數統計功能可以抓到
                 editor.innerHTML += `
-                    <div class="mb-8 animate-fade-in group">
-                        <div class="flex items-center gap-2 mb-2 border-b border-slate-100 pb-1">
+                    <div class="mb-8 animate-fade-in group" data-phase="${phase}">
+                        <div class="flex items-center gap-2 mb-2 border-b border-slate-100 pb-1 select-none">
                             <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">Phase: ${phase}</span>
                             <span class="text-[10px] text-slate-300">${timestamp}</span>
                         </div>
@@ -527,12 +523,12 @@
                     </div>
                 `;
                 editor.scrollTop = editor.scrollHeight;
+                updateWordCount(); // 更新字數
             } else {
                 addChatMessage('system', `❌ 生成錯誤：${response.message}`);
             }
         }
 
-        // Initial Load
         switchTab('setup');
     </script>
 </body>
