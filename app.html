@@ -440,6 +440,12 @@
                   <i class="fa-solid fa-gavel mr-1"></i>Reviewer 模式
                 </button>
               </div>
+              <div class="flex items-center gap-1 mb-1">
+                <button class="flex-1 px-2 py-1 rounded border border-emerald-500 text-emerald-700 text-[11px] hover:bg-emerald-50"
+                        onclick="runAutoCitationForCurrentChapter()">
+                  <i class="fa-solid fa-bookmark mr-1"></i>AI 自動配文獻（僅用 referencePool）
+                </button>
+              </div>
               <div class="relative">
                 <textarea id="ai-input" rows="2"
                           class="w-full px-2 pr-8 py-1.5 rounded border border-slate-300 text-[11px]"
@@ -477,3 +483,706 @@
                 <span id="chapter-word-count" class="text-slate-500">本章字數：0</span>
                 <span id="total-word-count" class="text-slate-400">全文字數：0</span>
               </div>
+            </div>
+
+            <!-- 章節編輯器：每章一個 textarea，只允許從 referencePool 插入引文 -->
+            <div id="chapter-editors" class="flex-1 overflow-hidden">
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin"
+                data-chapter="outline"
+                oninput="onChapterInput('outline', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="intro"
+                oninput="onChapterInput('intro', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="lit_review"
+                oninput="onChapterInput('lit_review', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="method"
+                oninput="onChapterInput('method', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="results"
+                oninput="onChapterInput('results', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="discussion"
+                oninput="onChapterInput('discussion', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="conclusion"
+                oninput="onChapterInput('conclusion', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="implications"
+                oninput="onChapterInput('implications', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="limitations"
+                oninput="onChapterInput('limitations', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="abstract"
+                oninput="onChapterInput('abstract', this.value)"
+              ></textarea>
+              <textarea
+                class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin hidden"
+                data-chapter="fullpaper"
+                oninput="onChapterInput('fullpaper', this.value)"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Submission -->
+      <div id="tab-submission" class="hidden space-y-4">
+        <div class="glass rounded-xl border border-slate-200 p-4 text-xs">
+          <h2 class="font-semibold text-slate-800 text-sm mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-envelope-open-text text-indigo-500"></i> 投稿包總覽
+          </h2>
+          <p class="text-[11px] text-slate-600">
+            在這裡彙整 cover letter、投稿信模板、回覆 reviewer 信件草稿與期刊投稿注意事項，可搭配上方寫作區的全文內容與 References 一起輸出。
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<script>
+  // 全域狀態：引用一律來自 referencePool
+  const state = {
+    currentTab: 'project',
+    currentChapter: 'outline',
+    lang: 'zh-TW',
+    stylePreset: 'balanced',
+    referencePool: [],          // 上傳後的文獻池
+    usedCitationIds: new Set(), // 實際在正文中被偵測到的文獻 id
+    chapters: {
+      outline: '',
+      intro: '',
+      lit_review: '',
+      method: '',
+      results: '',
+      discussion: '',
+      conclusion: '',
+      implications: '',
+      limitations: '',
+      abstract: '',
+      fullpaper: ''
+    },
+    journalProfiles: {
+      taper: {
+        name: 'Asia-Pacific Education Researcher',
+        abbr: 'TAPER',
+        scope: 'Education · Asia-Pacific · empirical and theoretical studies',
+        wordLimit: '約 8,000–10,000 字',
+        style: 'APA 7th edition',
+        note: '偏向實證研究與區域性教育議題。'
+      },
+      se: {
+        name: 'Science Education',
+        abbr: 'SciEd',
+        scope: 'Science education · conceptual and empirical research',
+        wordLimit: '約 10,000 字以內',
+        style: 'APA 7th edition',
+        note: '高度理論整合與方法論嚴謹度要求。'
+      }
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initNav();
+    initLangSelect();
+    initJournalSelect();
+    updateProjectMeta();
+    switchTab('project');
+    switchChapter(); // 初始化章節
+    initChecklist();
+  });
+
+  // --------- UI 初始化 ----------
+
+  function initNav() {
+    const firstNav = document.querySelector('.nav-btn[data-tab="project"]');
+    if (firstNav) firstNav.classList.add('bg-slate-800');
+  }
+
+  function initLangSelect() {
+    const sel = document.getElementById('lang-select');
+    if (!sel) return;
+    const options = [
+      { value: 'zh-TW', label: '繁體中文' },
+      { value: 'en', label: 'English' }
+    ];
+    sel.innerHTML = '';
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      sel.appendChild(o);
+    });
+    sel.value = state.lang;
+    sel.addEventListener('change', () => {
+      state.lang = sel.value;
+    });
+  }
+
+  function initJournalSelect() {
+    const sel = document.getElementById('journal-select');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '請選擇目標期刊';
+    sel.appendChild(placeholder);
+
+    Object.entries(state.journalProfiles).forEach(([key, jp]) => {
+      const o = document.createElement('option');
+      o.value = key;
+      o.textContent = `${jp.name} (${jp.abbr})`;
+      sel.appendChild(o);
+    });
+  }
+
+  function initChecklist() {
+    const checklist = document.getElementById('chapter-checklist');
+    if (!checklist) return;
+    checklist.innerHTML = `
+      <div class="flex items-center justify-between mb-1">
+        <span>本章寫作重點快速檢核</span>
+      </div>
+      <ul class="space-y-1">
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>是否清楚回應研究問題與目的？</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+          <span>是否適當整合文獻並避免大段抄寫？</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+          <span>是否有清楚標示與 APA 7th 一致的引文？</span>
+        </li>
+      </ul>
+    `;
+  }
+
+  // --------- 導覽 / 章節 ----------
+
+  function switchTab(tabId) {
+    state.currentTab = tabId;
+    const tabs = ['project', 'design', 'literature', 'data', 'writing', 'submission'];
+    tabs.forEach(id => {
+      const el = document.getElementById('tab-' + id);
+      if (el) el.classList.toggle('hidden', id !== tabId);
+    });
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.toggle('bg-slate-800', btn.dataset.tab === tabId);
+    });
+
+    const title = document.getElementById('main-title');
+    const subtitle = document.getElementById('main-subtitle');
+    if (!title || !subtitle) return;
+
+    const map = {
+      project: ['專案＆期刊設定', '從期刊開始，決定整篇論文的遊戲規則。'],
+      design: ['研究設計', '在此整理研究問題、假設、變項與分析方法。'],
+      literature: ['文獻＆引用管理', '所有引用一律來自上傳之文獻池（referencePool）。'],
+      data: ['數據＆分析', '整理統計結果，準備撰寫結果與討論。'],
+      writing: ['寫作＆Reviewer', '分章撰寫，並由 AI 協助檢視與評論。'],
+      submission: ['投稿包', '將稿件、cover letter 與回覆信整合成投稿套餐。']
+    };
+    if (map[tabId]) {
+      title.textContent = map[tabId][0];
+      subtitle.textContent = map[tabId][1];
+    }
+  }
+
+  function switchChapter() {
+    const sel = document.getElementById('chapter-select');
+    if (!sel) return;
+    const chapterKey = sel.value;
+    state.currentChapter = chapterKey;
+
+    const editors = document.querySelectorAll('.chapter-editor');
+    editors.forEach(ed => {
+      const isCurrent = ed.dataset.chapter === chapterKey;
+      ed.classList.toggle('hidden', !isCurrent);
+      if (isCurrent) {
+        ed.value = state.chapters[chapterKey] || '';
+      }
+    });
+
+    const label = document.getElementById('current-chapter-label');
+    if (label) {
+      label.textContent = sel.options[sel.selectedIndex].textContent || chapterKey;
+    }
+    updateWordCounts();
+  }
+
+  function onChapterInput(chapterKey, text) {
+    state.chapters[chapterKey] = text;
+    updateWordCounts();
+  }
+
+  function getCurrentEditor() {
+    return document.querySelector('.chapter-editor[data-chapter="' + state.currentChapter + '"]');
+  }
+
+  function updateWordCounts() {
+    const chapterText = state.chapters[state.currentChapter] || '';
+    const chapterWordCount = countWords(chapterText);
+    let total = 0;
+    Object.values(state.chapters).forEach(t => total += countWords(t || ''));
+
+    const chapterSpan = document.getElementById('chapter-word-count');
+    const totalSpan = document.getElementById('total-word-count');
+    if (chapterSpan) chapterSpan.textContent = '本章字數：' + chapterWordCount;
+    if (totalSpan) totalSpan.textContent = '全文字數：' + total;
+  }
+
+  function countWords(text) {
+    if (!text) return 0;
+    const tokens = text.trim().split(/\s+/).filter(Boolean);
+    return tokens.length;
+  }
+
+  // --------- 專案 / 期刊 ----------
+
+  function updateProjectMeta() {
+    const title = document.getElementById('project-title')?.value || '未命名專案';
+    const field = document.getElementById('project-field')?.value || '';
+    const year = document.getElementById('project-year')?.value || '';
+
+    const sidebarName = document.getElementById('sidebar-project-name');
+    if (sidebarName) sidebarName.textContent = title || '未命名專案';
+
+    const meta = document.getElementById('user-meta');
+    if (meta) {
+      meta.textContent = field && year
+        ? field + ' · Target ' + year
+        : 'Local project · Auto-save';
+    }
+  }
+
+  function updateJournalProfile() {
+    const sel = document.getElementById('journal-select');
+    if (!sel) return;
+    const key = sel.value;
+    const profile = state.journalProfiles[key];
+    const box = document.getElementById('journal-profile-summary');
+    if (!box) return;
+
+    box.innerHTML = '';
+    const sidebarJournal = document.getElementById('sidebar-journal');
+    if (sidebarJournal) {
+      sidebarJournal.textContent = profile ? profile.name : '未設定';
+    }
+
+    if (!profile) {
+      box.innerHTML = '<p class="text-slate-500">尚未選擇期刊。</p>';
+      return;
+    }
+
+    box.innerHTML = `
+      <div><span class="text-slate-400">期刊名稱：</span><span class="font-semibold">${profile.name} (${profile.abbr})</span></div>
+      <div><span class="text-slate-400">範疇：</span><span>${profile.scope}</span></div>
+      <div><span class="text-slate-400">字數限制：</span><span>${profile.wordLimit}</span></div>
+      <div><span class="text-slate-400">寫作體例：</span><span>${profile.style}</span></div>
+      <div><span class="text-slate-400">備註：</span><span>${profile.note}</span></div>
+    `;
+  }
+
+  function updateStylePreset() {
+    const sel = document.getElementById('style-preset');
+    if (!sel) return;
+    state.stylePreset = sel.value;
+  }
+
+  // --------- 文獻池 referencePool：只允許從這裡引用 ----------
+
+  function handleLiteratureUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+
+      state.referencePool = rows.map((row, idx) => ({
+        id: 'ref-' + (idx + 1),
+        authors: (row.Author || row.Authors || row['Authors'] || '').toString().trim(),
+        year: (row.Year || row.PY || '').toString().trim(),
+        title: (row.Title || row['Article Title'] || row['Document Title'] || '').toString().trim(),
+        journal: (row.Journal || row['Source Title'] || row['Journal Name'] || '').toString().trim(),
+        doi: (row.DOI || row.Doi || row['DOI'] || '').toString().trim()
+      }));
+
+      const litCount = document.getElementById('lit-count');
+      if (litCount) litCount.textContent = state.referencePool.length;
+
+      renderLiteratureList();
+      renderLiteraturePreview();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderLiteratureList() {
+    const box = document.getElementById('lit-list');
+    const input = document.getElementById('lit-search');
+    if (!box) return;
+    const keyword = (input?.value || '').toLowerCase();
+
+    box.innerHTML = '';
+    if (!state.referencePool.length) {
+      box.innerHTML = '<p class="text-slate-400 text-[11px]">尚未上傳文獻庫。</p>';
+      return;
+    }
+
+    state.referencePool
+      .filter(ref => {
+        if (!keyword) return true;
+        const s = (ref.authors + ' ' + ref.title + ' ' + ref.journal).toLowerCase();
+        return s.includes(keyword);
+      })
+      .slice(0, 50)
+      .forEach(ref => {
+        const div = document.createElement('div');
+        div.className = 'flex items-start justify-between gap-2 py-1 border-b border-slate-200/70';
+        div.innerHTML = `
+          <div class="flex-1">
+            <div class="font-semibold text-[11px]">${escapeHtml(ref.authors || 'Unknown')} (${escapeHtml(ref.year || 'n.d.')})</div>
+            <div class="text-[10px] text-slate-600">${escapeHtml(ref.title || '')}</div>
+            <div class="text-[10px] text-slate-400 italic">${escapeHtml(ref.journal || '')}</div>
+          </div>
+          <button class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] hover:bg-emerald-700"
+                  onclick="insertCitation('${ref.id}')">
+            插入
+          </button>
+        `;
+        box.appendChild(div);
+      });
+  }
+
+  function renderLiteraturePreview() {
+    const body = document.getElementById('lit-preview-body');
+    if (!body) return;
+    body.innerHTML = '';
+    state.referencePool.slice(0, 20).forEach((ref, idx) => {
+      const tr = document.createElement('tr');
+      tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60';
+      tr.innerHTML = `
+        <td class="px-2 py-1">${idx + 1}</td>
+        <td class="px-2 py-1">${escapeHtml(ref.authors || '')}</td>
+        <td class="px-2 py-1">${escapeHtml(ref.year || '')}</td>
+        <td class="px-2 py-1">${escapeHtml(ref.title || '')}</td>
+        <td class="px-2 py-1">${escapeHtml(ref.journal || '')}</td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function syncLiteratureToBackend() {
+    // 保留函式名稱供後端整合使用，這裡只做基本檢查與提示
+    if (!state.referencePool.length) {
+      alert('請先上傳文獻庫（referencePool）。');
+      return;
+    }
+    alert('文獻庫已載入至前端狀態（referencePool）。如需同步到後端，請在 code.gs 中實作。');
+  }
+
+  // --------- 引文插入：只能來自 referencePool ----------
+
+  function insertCitation(refId) {
+    const ref = state.referencePool.find(r => r.id === refId);
+    if (!ref) {
+      alert('此文獻不在 referencePool 中，禁止引用。');
+      return;
+    }
+    const editor = getCurrentEditor();
+    if (!editor) {
+      alert('找不到目前章節的編輯器。');
+      return;
+    }
+
+    // 簡化：取第一位作者姓氏＋年份，APA 形式 (Author, Year)
+    const firstAuthor = (ref.authors || '').split(/[;,]/)[0] || ref.authors || '';
+    const authorSurname = firstAuthor.split(/\s+/).filter(Boolean)[0] || firstAuthor;
+    const year = ref.year || 'n.d.';
+    const citationText = `(${authorSurname}, ${year})`;
+
+    const start = editor.selectionStart ?? editor.value.length;
+    const end = editor.selectionEnd ?? editor.value.length;
+    const value = editor.value || '';
+
+    editor.value = value.slice(0, start) + citationText + value.slice(end);
+    editor.focus();
+    const pos = start + citationText.length;
+    editor.selectionStart = editor.selectionEnd = pos;
+
+    const chapterKey = state.currentChapter;
+    state.chapters[chapterKey] = editor.value;
+    updateWordCounts();
+
+    // 記錄該文獻有被使用
+    state.usedCitationIds.add(ref.id);
+  }
+
+  // --------- APA 引文掃描與 References 產生 ----------
+
+  function generateReferencesSection() {
+    if (!state.referencePool.length) {
+      alert('請先上傳文獻庫（referencePool）。');
+      return;
+    }
+
+    const report = scanAllCitationsAndUpdateUsed();
+    if (!report.matchedIds.size) {
+      alert('尚未偵測到任何符合 APA 格式且存在於 referencePool 的引文。');
+      return;
+    }
+
+    const refs = state.referencePool.filter(ref => report.matchedIds.has(ref.id));
+    refs.sort((a, b) => {
+      const aKey = (a.authors || '') + (a.year || '');
+      const bKey = (b.authors || '') + (b.year || '');
+      return aKey.localeCompare(bKey);
+    });
+
+    const lines = refs.map(formatReferenceAPA);
+    const sectionText = 'References\n' + lines.join('\n');
+
+    const fullEditor = document.querySelector('.chapter-editor[data-chapter="fullpaper"]');
+    if (!fullEditor) {
+      alert('找不到「全文整合」章節編輯器，已在 console 中輸出 References。');
+      console.log(sectionText);
+      return;
+    }
+
+    // 若全文已經有 References，先簡單移除末尾舊的，再加上新的
+    const current = fullEditor.value || '';
+    const withoutOld = current.replace(/\s*References[\s\S]*$/i, '').trimEnd();
+    fullEditor.value = (withoutOld ? withoutOld + '\n\n' : '') + sectionText;
+    state.chapters.fullpaper = fullEditor.value;
+    updateWordCounts();
+
+    if (report.unmatched.length) {
+      const sample = report.unmatched.slice(0, 5).map(u =>
+        `${u.chapterKey}: (${u.rawAuthor}, ${u.year})`
+      ).join('\n');
+      alert(
+        '已忽略 ' + report.unmatched.length +
+        ' 筆不在 referencePool 的引文，未納入 References。\n\n前幾筆範例：\n' +
+        sample
+      );
+    } else {
+      alert('已依照實際引用，從 referencePool 產生 References 區段。');
+    }
+  }
+
+  function scanAllCitationsAndUpdateUsed() {
+    const unmatched = [];
+    const matchedIds = new Set();
+
+    Object.entries(state.chapters).forEach(([chapterKey, text]) => {
+      if (!text) return;
+      const citations = extractAPACitations(text);
+      citations.forEach(cit => {
+        const ref = findRefByAuthorYear(cit.author, cit.year);
+        if (ref) {
+          matchedIds.add(ref.id);
+        } else {
+          unmatched.push({
+            chapterKey,
+            rawAuthor: cit.author,
+            year: cit.year
+          });
+        }
+      });
+    });
+
+    state.usedCitationIds = matchedIds;
+    return { matchedIds, unmatched };
+  }
+
+  function extractAPACitations(text) {
+    // 粗略抓取 (Author, 2020) 形式，引號內不處理
+    const regex = /\(([A-Z][A-Za-z\-]+(?:\s+(?:et al\.|&\s+[A-Z][A-Za-z\-]+))?),\s*(\d{4}[a-z]?)\)/g;
+    const result = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      result.push({
+        author: match[1],
+        year: match[2]
+      });
+    }
+    return result;
+  }
+
+  function findRefByAuthorYear(author, year) {
+    const targetLast = normalizeName(author.split(/[,\s]/)[0] || author);
+    return state.referencePool.find(ref => {
+      const firstAuthor = (ref.authors || '').split(/[;,]/)[0] || ref.authors || '';
+      const refLast = normalizeName(firstAuthor.split(/[,\s]/)[0] || firstAuthor);
+      const refYear = (ref.year || '').toString();
+      return refLast && refLast === targetLast && (!year || refYear.startsWith(year));
+    }) || null;
+  }
+
+  function formatReferenceAPA(ref) {
+    const authors = ref.authors || '';
+    const year = ref.year || 'n.d.';
+    const title = ref.title || '';
+    const journal = ref.journal || '';
+    const doi = ref.doi ? 'https://doi.org/' + ref.doi.replace(/^https?:\/\/(doi\.org\/)?/i, '') : '';
+    let line = `${authors} (${year}). ${title}. ${journal}.`;
+    if (doi) line += ' ' + doi;
+    return line;
+  }
+
+  function normalizeName(name) {
+    return (name || '')
+      .toLowerCase()
+      .replace(/[^a-z\u4e00-\u9fff]/g, '');
+  }
+
+  // --------- AI 自動配文獻：前端只負責送出資料與驗證回傳 ----------
+
+  function runAutoCitationForCurrentChapter() {
+    if (!state.referencePool.length) {
+      alert('請先在「文獻＆引用」頁上傳文獻庫（referencePool）。');
+      return;
+    }
+    const chapterKey = state.currentChapter;
+    const text = state.chapters[chapterKey] || '';
+    if (!text.trim()) {
+      alert('本章尚未有文字內容。');
+      return;
+    }
+
+    // 這裡預留給後端（code.gs）整合：
+    // 1. 後端接收 chapterText + referencePool
+    // 2. 逐句比對、決定句首／句末 APA 引文
+    // 3. 僅使用 referencePool 中的文獻
+    // 4. 回傳完成配引的章節文字
+    alert('目前前端僅完成「只允許 referencePool 引文」與 APA 檢查。\n' +
+          '逐句比對與自動配文獻請在 code.gs 中實作對應 API，\n' +
+          '再於此函式中呼叫該 API 並更新 state.chapters。');
+  }
+
+  // --------- 其他功能（保留介面，不改動文字；內文可在 code.gs 擴充） ----------
+
+  function runManuscriptFitCheck() {
+    alert('期刊適配檢查：請在後端實作實際規則與檢查邏輯。');
+  }
+
+  function runQualityCheck() {
+    alert('品質＆倫理檢查：請在後端實作研究倫理與寫作品質檢查。');
+  }
+
+  function updateResearchDesign() {
+    // 目前僅作佔位，實際可在後端或此處進一步實作
+  }
+
+  function addRQ() {
+    const list = document.getElementById('rq-list');
+    if (!list) return;
+    const idx = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-1';
+    div.innerHTML = `
+      <span class="mt-0.5 text-slate-400">RQ${idx}.</span>
+      <textarea class="flex-1 border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
+        placeholder="撰寫研究問題"></textarea>
+    `;
+    list.appendChild(div);
+  }
+
+  function addHypothesis() {
+    const list = document.getElementById('hypo-list');
+    if (!list) return;
+    const idx = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-1';
+    div.innerHTML = `
+      <span class="mt-0.5 text-slate-400">H${idx}.</span>
+      <textarea class="flex-1 border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
+        placeholder="撰寫研究假設"></textarea>
+    `;
+    list.appendChild(div);
+  }
+
+  function generateMethodDraft() {
+    alert('生成方法草稿功能可與後端 AI 整合，前端已保留按鈕與函式介面。');
+  }
+
+  function updateDataMeta() {
+    // 可視需要擴充
+  }
+
+  function generateResultsDraft() {
+    alert('生成結果草稿功能可與後端 AI 整合，前端已保留按鈕與函式介面。');
+  }
+
+  function generateChapterDraft() {
+    alert('生成本章草稿功能可與後端 AI 整合，前端已保留按鈕與函式介面。');
+  }
+
+  function runReviewerMode() {
+    alert('Reviewer 模式可在後端實作實際評論與建議，前端已保留觸發點。');
+  }
+
+  function sendAIMessage() {
+    const input = document.getElementById('ai-input');
+    const panel = document.getElementById('chat-panel');
+    if (!input || !panel) return;
+    const text = input.value.trim();
+    if (!text) {
+      alert('請輸入指令，或直接使用「生成本章草稿」按鈕。');
+      return;
+    }
+    const div = document.createElement('div');
+    div.className = 'bg-white border border-slate-200 rounded px-2 py-1 text-[11px]';
+    div.textContent = '指令已送出（實際 AI 回應請在後端實作）：' + text;
+    panel.appendChild(div);
+    panel.scrollTop = panel.scrollHeight;
+    input.value = '';
+  }
+
+  // --------- 小工具 ----------
+
+  function escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+</script>
+
+</body>
+</html>
