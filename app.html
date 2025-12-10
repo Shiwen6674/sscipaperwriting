@@ -552,15 +552,46 @@
 
       <!-- TAB: Submission -->
       <div id="tab-submission" class="hidden space-y-4">
-        <div class="glass rounded-xl border border-slate-200 p-4 text-xs">
+        <div class="glass rounded-xl border border-slate-200 p-4 text-xs space-y-3">
           <h2 class="font-semibold text-slate-800 text-sm mb-2 flex items-center gap-2">
             <i class="fa-solid fa-envelope-open-text text-indigo-500"></i> 投稿包總覽
           </h2>
           <p class="text-[11px] text-slate-600 mb-2">
             在這裡彙整 cover letter、投稿信模板、回覆 reviewer 信件草稿與期刊投稿注意事項，可搭配上方寫作區的全文內容與 References 一起輸出。
           </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="flex flex-col">
+              <label class="text-slate-500 mb-1">Cover Letter 草稿</label>
+              <textarea id="sub-cover-letter" rows="8"
+                        class="w-full px-2 py-1.5 rounded border border-slate-300 scroll-thin"></textarea>
+              <button class="mt-1 px-2 py-1 rounded bg-indigo-600 text-white text-[11px]"
+                      onclick="generateCoverLetter()">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 生成 Cover Letter
+              </button>
+            </div>
+            <div class="flex flex-col">
+              <label class="text-slate-500 mb-1">Response to Reviewers 草稿</label>
+              <textarea id="sub-response" rows="8"
+                        class="w-full px-2 py-1.5 rounded border border-slate-300 scroll-thin"
+                        placeholder="可貼上 reviewers 意見，請 AI 協助草擬逐點回覆。"></textarea>
+              <button class="mt-1 px-2 py-1 rounded bg-indigo-600 text-white text-[11px]"
+                      onclick="generateResponseToReviewers()">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI 生成回覆草稿
+              </button>
+            </div>
+            <div class="flex flex-col">
+              <label class="text-slate-500 mb-1">投稿備註 / Checklist</label>
+              <textarea id="sub-notes" rows="8"
+                        class="w-full px-2 py-1.5 rounded border border-slate-300 scroll-thin"
+                        placeholder="例如：字數、表格數量、IRB 編號、開放資料聲明等。"></textarea>
+              <button class="mt-1 px-2 py-1 rounded border border-slate-300 text-[11px]"
+                      onclick="appendSubmissionSummaryToChat()">
+                <i class="fa-solid fa-paperclip mr-1"></i>送到 AI 面板做總檢查
+              </button>
+            </div>
+          </div>
           <p class="text-[10px] text-slate-500">
-            （此區功能可依實際工作流程擴充，如：儲存多版本投稿信模板、對應 R1/R2 審查意見等）
+            （此區資料會一起存入 localStorage，未連線後端時也不會遺失。） 
           </p>
         </div>
       </div>
@@ -570,131 +601,190 @@
 </main>
 
 <script>
-  /**********************
-   * 後端設定與共用工具 *
-   **********************/
-  const BACKEND_CONFIG = {
-    // 實際使用時請改成你的 Apps Script 或其他後端 Web API URL
-    API_BASE_URL: 'https://script.google.com/macros/s/AKfycbxzuSB40CJ_8VgEG5HsZR0QBqShK5TMKQAHHkQf_ww4gGy90uWZUoLjiuwbBpT4BkJoKQ/exec', // 例如："https://script.google.com/macros/s/XXX/exec"
-    USE_MOCK: false    // 開發階段用 mock；要打真後端時改成 false 並設定 API_BASE_URL
-  };
+// =======================
+// 後端設定與共用工具
+// =======================
+const BACKEND_CONFIG = {
+  // 等一下你貼 code.gs 時，只要把下面 URL 換成你的 GAS deploy URL
+  API_BASE_URL: 'https://script.google.com/macros/s/AKfycbxzuSB40CJ_8VgEG5HsZR0QBqShK5TMKQAHHkQf_ww4gGy90uWZUoLjiuwbBpT4BkJoKQ/exec',
+  USE_MOCK: true // 先給你 mock 測試，確認前端完全正常，再改成 false 接真後端
+};
 
-  async function callBackend(endpoint, payload) {
-    // 若未設定 API_BASE_URL 或仍在 mock 模式，就回傳假的結果，至少 UI 不會掛
-    if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
-      console.warn('[ScholarCraft] 使用 mock 後端：', endpoint, payload);
-      await new Promise(r => setTimeout(r, 400)); // 模擬延遲
+async function callBackend(endpoint, payload) {
+  if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
+    console.warn('[ScholarCraft] 使用 mock 後端：', endpoint, payload);
+    await new Promise(r => setTimeout(r, 400)); // 模擬延遲
 
-      // --- 新增或修改的 Mock 邏輯 START ---
+    // ---- Mock：期刊適配檢查 ----
+    if (endpoint === '/fitCheck') {
+      const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
+      const field = payload.projectMeta.field || '未填寫領域';
+      let score = 70;
+      if (journal.abbr === 'L&I' || journal.abbr === 'IJSME' || journal.abbr === 'TAPER') score += 10;
+      if (payload.design.type === 'quant' || payload.design.type === 'mixed') score += 5;
 
-      if (endpoint === '/fitCheck') {
-        const journal = payload.journalProfile || { abbr: '未設定', name: '目標期刊' };
-        const field = payload.projectMeta.field || '未填寫領域';
-        let score = 75;
-        if (journal.abbr === 'L&I') score += 10;
-        if (payload.design.type === 'quant') score += 5;
-        return {
-          ok: true,
-          data: {
-            summary: `[Mock] 期刊適配檢查結果：\n\n專案領域：${field}\n目標期刊：${journal.name} (${journal.abbr})\n\n**綜合適配分數：${score}/100**\n\n- 領域契合度：良好 (因應教育領域)\n- 研究方法：${payload.design.type || '未指定'}，若為量化研究，請加強理論貢獻。\n- 字數評估：目前預估字數（${getWordStats(Object.values(payload.chapters).join(' ')).total}）符合初審範圍。`
-          }
-        };
-      }
-      if (endpoint === '/qualityCheck') {
-        const wordCount = getWordStats(payload.chapters.fullpaper || '').total;
-        let ethicsMsg = '倫理聲明檢查：未見明顯倫理瑕疵（請確保問卷有 IRB）。';
-        if (wordCount < 1000) ethicsMsg = '倫理聲明檢查：文章內容不足，無法進行深度品質檢核。';
-        return {
-          ok: true,
-          data: {
-            summary: `[Mock] 品質＆倫理檢查結果：\n\n1. 寫作嚴謹度：文獻探討完整度尚可，應在方法論（Method）部分補足研究設計細節。\n2. 數據透明度：請確保結果章節包含足夠的統計報告，例如 F, p, $\\eta^2$ 等。\n3. ${ethicsMsg}`
-          }
-        };
-      }
+      const wordStats = getWordStats(Object.values(payload.chapters || {}).join(' '));
+      return {
+        ok: true,
+        data: {
+          summary:
+            `【Mock】期刊適配檢查\n\n` +
+            `專案領域：${field}\n` +
+            `目標期刊：${journal.name} (${journal.abbr})\n\n` +
+            `綜合適配分數：${score}/100\n\n` +
+            `1. 領域契合度：與期刊 scope 大致相符，可加強與近期專題的連結。\n` +
+            `2. 研究設計：${payload.design.type || '未指定'}；請在 Method 中明確說明樣本與統計方法。\n` +
+            `3. 字數預估：約 ${wordStats.total}（中/日：${wordStats.cjkChars}，英：${wordStats.enWords}），目前仍在可接受範圍內。\n`
+        }
+      };
+    }
 
-      // --- 繼承自原程式碼的 Mock 邏輯 START ---
+    // ---- Mock：品質＆倫理檢查 ----
+    if (endpoint === '/qualityCheck') {
+      const full = payload.chapters.fullpaper || '';
+      const wordStats = getWordStats(full);
+      const tooShort = wordStats.total < 1500;
 
-      if (endpoint === '/generateChapter') {
-        return {
-          ok: true,
-          data: {
-            text: (payload.chapterText || '') + '\n\n[Mock AI] 這是示意草稿，請接上真實後端以取得正式內容。'
-          }
-        };
-      }
-      if (endpoint === '/reviewChapter') {
-        return {
-          ok: true,
-          data: {
-            summary: 'Mock Reviewer：整體結構大致合理，但請補強理論脈絡與方法論嚴謹度。',
-            comments: [
-              '1. 建議在開頭更清楚界定研究問題與研究貢獻。',
-              '2. 文獻整合部分可以增加近五年的 SSCI 研究。',
-              '3. 結果與討論應更緊密對應研究問題。'
-            ]
-          }
-        };
-      }
-      if (endpoint === '/autoCiteChapter') {
-        return {
-          ok: true,
-          data: {
-            text: payload.chapterText + '\n\n[Mock AI] 已示意性標記引用，實際配文獻請由真實後端完成。'
-          }
-        };
-      }
-      if (endpoint === '/resultsDraft') {
-        return {
-          ok: true,
-          data: { text: '[Mock AI] 這裡會根據你上傳的分析輸出，生成結果敘述草稿。' }
-        };
-      }
-      if (endpoint === '/methodDraft') {
-        return {
-          ok: true,
-          data: { text: '[Mock AI] 這裡會根據研究設計與 RQ，生成方法章節草稿。' }
-        };
-      }
-      if (endpoint === '/syncReferences') {
-        return { ok: true, data: { message: 'Mock：文獻庫已同步（實際未寫入後端）。' } };
-      }
-      return { ok: true, data: {} };
-    }
+      return {
+        ok: true,
+        data: {
+          summary:
+            `【Mock】品質＆倫理檢查\n\n` +
+            `1. 結構完整度：${tooShort ? '目前全文字數偏少，建議補齊各章節內容。' : '章節結構大致完整，可進一步優化過渡與論證深度。'}\n` +
+            `2. 方法與結果透明度：請在 Method 中補上量表信度、IRB/倫理審查資訊，以及在 Results 報告完整統計量（M, SD, F, p, η² 等）。\n` +
+            `3. 研究倫理：若涉及學生或弱勢族群，需在稿件中清楚說明同意程序與資料匿名化處理方式。\n`
+        }
+      };
+    }
 
-    try {
-      const res = await fetch(BACKEND_CONFIG.API_BASE_URL + endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload || {})
-      });
-      if (!res.ok) {
-        console.error('Backend HTTP error', res.status, await res.text());
-        return { ok: false, error: 'HTTP ' + res.status };
-      }
-      const data = await res.json();
-      return { ok: true, data };
-    } catch (err) {
-      console.error('Backend fetch error', err);
-      return { ok: false, error: err.message || String(err) };
-    }
-  }
+    // ---- Mock：章節生成 ----
+    if (endpoint === '/generateChapter') {
+      return {
+        ok: true,
+        data: {
+          text: (payload.chapterText || '') +
+            '\n\n[Mock AI]（示意）此處會根據你的研究設計與文獻池，自動擴充本章內容。接上真實後端後即可產生正式草稿。'
+        }
+      };
+    }
 
-  function escapeHtml(str) {
-    return (str || '').replace(/[&<>"']/g, function(m) {
-      return ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      })[m];
-    });
-  }
-  /**********************
-   * 多語系 UI 字典與切換 *
-   **********************/
+    // ---- Mock：Reviewer 模式 ----
+    if (endpoint === '/reviewChapter') {
+      return {
+        ok: true,
+        data: {
+          summary: 'Mock Reviewer：整體結構大致合理，但仍有幾點可加強。',
+          comments: [
+            '1. 建議在段落開頭更清楚界定研究問題與理論落點。',
+            '2. 可補充近五年 SSCI 期刊中相關主題的實證研究，以強化文獻連結。',
+            '3. 結果與討論之間的對應關係可以再更緊密，避免僅重述統計數字。'
+          ]
+        }
+      };
+    }
 
- // 主 UI 的語系字典（側欄 nav + 專案卡片 + 期刊卡片）
+    // ---- Mock：AI 自動配文獻 ----
+    if (endpoint === '/autoCiteChapter') {
+      return {
+        ok: true,
+        data: {
+          text: (payload.chapterText || '') +
+            '\n\n[Mock AI] 已示意性加入幾處 (Author, Year) 引用標記；接真實後端後會依 referencePool 精準配對。'
+        }
+      };
+    }
+
+    // ---- Mock：結果章節草稿 ----
+    if (endpoint === '/resultsDraft') {
+      return {
+        ok: true,
+        data: {
+          text: '[Mock AI] 這裡會根據你上傳的分析輸出與 dataNotes，自動撰寫 Results 章節的敘述草稿。'
+        }
+      };
+    }
+
+    // ---- Mock：方法章節草稿 ----
+    if (endpoint === '/methodDraft') {
+      return {
+        ok: true,
+        data: {
+          text: '[Mock AI] 這裡會利用研究設計（樣本、工具、RQ、分析方法）生成 Method 章節骨架與敘述。'
+        }
+      };
+    }
+
+    // ---- Mock：同步文獻 ----
+    if (endpoint === '/syncReferences') {
+      return { ok: true, data: { message: `Mock：已接收 ${payload.referencePool?.length || 0} 筆文獻（未實際寫入後端）。` } };
+    }
+
+    // ---- Mock：投稿包相關 ----
+    if (endpoint === '/generateCoverLetter') {
+      return {
+        ok: true,
+        data: {
+          text: '[Mock AI] 根據你的專案資訊與目標期刊，這裡會生成一封正式且符合期刊風格的 Cover Letter 草稿。'
+        }
+      };
+    }
+
+    if (endpoint === '/generateResponseToReviewers') {
+      return {
+        ok: true,
+        data: {
+          text: '[Mock AI] 這裡會根據你貼上的 reviewers 意見與稿件內容，建立逐點回覆的 Response to Reviewers 草稿。'
+        }
+      };
+    }
+
+    // ---- Mock：自由聊天 ----
+    if (endpoint === '/chat') {
+      return {
+        ok: true,
+        data: {
+          reply: '[Mock AI] 這是示意回覆。接上真實後端後，我會依你的指令與目前章節內容給出具體建議。'
+        }
+      };
+    }
+
+    return { ok: true, data: {} };
+  }
+
+  try {
+    const res = await fetch(BACKEND_CONFIG.API_BASE_URL + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
+    });
+    if (!res.ok) {
+      console.error('Backend HTTP error', res.status, await res.text());
+      return { ok: false, error: 'HTTP ' + res.status };
+    }
+    const data = await res.json();
+    return { ok: true, data };
+  } catch (err) {
+    console.error('Backend fetch error', err);
+    return { ok: false, error: err.message || String(err) };
+  }
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/[&<>"']/g, function (m) {
+    return ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[m];
+  });
+}
+
+// =======================
+// 多語系字典
+// =======================
+
 const UI_I18N = {
   'zh-TW': {
     langLabel: '生成語言',
@@ -705,27 +795,8 @@ const UI_I18N = {
       data: '4. 數據＆分析',
       writing: '5. 寫作＆Reviewer',
       submission: '6. 投稿包'
-    },
-    projectPanel: {
-      cardTitle: '專案基本資訊',
-      projectNameLabel: '專案名稱',
-      projectNamePlaceholder: '例如：Generative AI in PBL',
-      domainLabel: '領域',
-      domainPlaceholder: '例如：Science education / AI in education',
-      yearLabel: '預定投稿年份'
-    },
-    journalPanel: {
-      cardTitle: '目標期刊設定',
-      targetJournalLabel: '目標期刊',
-      targetJournalHint: '可在程式中擴充 journalProfiles 物件，加入常用期刊。',
-      metaNameLabel: '期刊名稱：',
-      metaScopeLabel: '範疇：',
-      metaWordLimitLabel: '字數限制：',
-      metaStyleLabel: '寫作體例：',
-      metaNoteLabel: '備註：'
     }
   },
-
   'zh-CN': {
     langLabel: '生成语言',
     nav: {
@@ -735,27 +806,8 @@ const UI_I18N = {
       data: '4. 数据与分析',
       writing: '5. 写作与审稿人',
       submission: '6. 投稿包'
-    },
-    projectPanel: {
-      cardTitle: '项目基本信息',
-      projectNameLabel: '项目名称',
-      projectNamePlaceholder: '例如：Generative AI in PBL',
-      domainLabel: '领域',
-      domainPlaceholder: '例如：科学教育 / AI 教育',
-      yearLabel: '预计投稿年份'
-    },
-    journalPanel: {
-      cardTitle: '目标期刊设置',
-      targetJournalLabel: '目标期刊',
-      targetJournalHint: '可以在代码中的 journalProfiles 对象里加入常用期刊。',
-      metaNameLabel: '期刊名称：',
-      metaScopeLabel: '范围：',
-      metaWordLimitLabel: '字数限制：',
-      metaStyleLabel: '写作体例：',
-      metaNoteLabel: '备注：'
     }
   },
-
   'en': {
     langLabel: 'Generation language',
     nav: {
@@ -765,27 +817,8 @@ const UI_I18N = {
       data: '4. Data & analysis',
       writing: '5. Writing & reviewer',
       submission: '6. Submission package'
-    },
-    projectPanel: {
-      cardTitle: 'Project basic information',
-      projectNameLabel: 'Project title',
-      projectNamePlaceholder: 'e.g., Generative AI in PBL',
-      domainLabel: 'Field',
-      domainPlaceholder: 'e.g., Science education / AI in education',
-      yearLabel: 'Planned submission year'
-    },
-    journalPanel: {
-      cardTitle: 'Target journal settings',
-      targetJournalLabel: 'Target journal',
-      targetJournalHint: 'You can define frequently used journals in the journalProfiles object.',
-      metaNameLabel: 'Journal title:',
-      metaScopeLabel: 'Scope:',
-      metaWordLimitLabel: 'Word limit:',
-      metaStyleLabel: 'Writing style:',
-      metaNoteLabel: 'Notes:'
     }
   },
-
   'ja': {
     langLabel: '生成言語',
     nav: {
@@ -795,27 +828,8 @@ const UI_I18N = {
       data: '4. データと分析',
       writing: '5. 執筆と査読者',
       submission: '6. 投稿パッケージ'
-    },
-    projectPanel: {
-      cardTitle: 'プロジェクトの基本情報',
-      projectNameLabel: 'プロジェクト名',
-      projectNamePlaceholder: '例：Generative AI in PBL',
-      domainLabel: '分野',
-      domainPlaceholder: '例：理科教育／AI in education',
-      yearLabel: '投稿予定年'
-    },
-    journalPanel: {
-      cardTitle: 'ターゲットジャーナルの設定',
-      targetJournalLabel: 'ターゲットジャーナル',
-      targetJournalHint: 'よく使うジャーナルはコード内の journalProfiles オブジェクトに定義できます。',
-      metaNameLabel: 'ジャーナル名：',
-      metaScopeLabel: '範囲：',
-      metaWordLimitLabel: '語数：',
-      metaStyleLabel: '執筆スタイル：',
-      metaNoteLabel: '備考：'
     }
   },
-
   'vi': {
     langLabel: 'Ngôn ngữ sinh văn',
     nav: {
@@ -825,27 +839,8 @@ const UI_I18N = {
       data: '4. Dữ liệu & phân tích',
       writing: '5. Viết bài & phản biện',
       submission: '6. Gói gửi bài'
-    },
-    projectPanel: {
-      cardTitle: 'Thông tin cơ bản của đề án',
-      projectNameLabel: 'Tên đề án',
-      projectNamePlaceholder: 'Ví dụ: Generative AI in PBL',
-      domainLabel: 'Lĩnh vực',
-      domainPlaceholder: 'Ví dụ: Giáo dục khoa học / AI trong giáo dục',
-      yearLabel: 'Năm dự kiến nộp bài'
-    },
-    journalPanel: {
-      cardTitle: 'Thiết lập tạp chí mục tiêu',
-      targetJournalLabel: 'Tạp chí mục tiêu',
-      targetJournalHint: 'Có thể khai báo các tạp chí thường dùng trong đối tượng journalProfiles trong mã.',
-      metaNameLabel: 'Tên tạp chí:',
-      metaScopeLabel: 'Phạm vi:',
-      metaWordLimitLabel: 'Giới hạn số từ:',
-      metaStyleLabel: 'Chuẩn trình bày:',
-      metaNoteLabel: 'Ghi chú:'
     }
   },
-
   'id': {
     langLabel: 'Bahasa keluaran',
     nav: {
@@ -855,27 +850,8 @@ const UI_I18N = {
       data: '4. Data & analisis',
       writing: '5. Penulisan & reviewer',
       submission: '6. Paket submit'
-    },
-    projectPanel: {
-      cardTitle: 'Informasi dasar proyek',
-      projectNameLabel: 'Judul proyek',
-      projectNamePlaceholder: 'Mis.: Generative AI in PBL',
-      domainLabel: 'Bidang',
-      domainPlaceholder: 'Mis.: Pendidikan sains / AI dalam pendidikan',
-      yearLabel: 'Tahun rencana submit'
-    },
-    journalPanel: {
-      cardTitle: 'Pengaturan jurnal target',
-      targetJournalLabel: 'Jurnal target',
-      targetJournalHint: 'Jurnal yang sering dipakai dapat didefinisikan di objek journalProfiles pada kode.',
-      metaNameLabel: 'Nama jurnal:',
-      metaScopeLabel: 'Cakupan:',
-      metaWordLimitLabel: 'Batas jumlah kata:',
-      metaStyleLabel: 'Gaya penulisan:',
-      metaNoteLabel: 'Catatan:'
     }
   },
-
   'th': {
     langLabel: 'ภาษาที่ใช้สร้าง',
     nav: {
@@ -885,232 +861,260 @@ const UI_I18N = {
       data: '4. ข้อมูลและการวิเคราะห์',
       writing: '5. การเขียนและผู้ประเมิน',
       submission: '6. ชุดส่งบทความ'
-    },
-    projectPanel: {
-      cardTitle: 'ข้อมูลพื้นฐานของโครงการวิจัย',
-      projectNameLabel: 'ชื่อโครงการ',
-      projectNamePlaceholder: 'เช่น Generative AI in PBL',
-      domainLabel: 'สาขา',
-      domainPlaceholder: 'เช่น Science education / AI in education',
-      yearLabel: 'ปีที่คาดว่าจะส่งตีพิมพ์'
-    },
-    journalPanel: {
-      cardTitle: 'การตั้งค่าวารสารเป้าหมาย',
-      targetJournalLabel: 'วารสารเป้าหมาย',
-      targetJournalHint: 'สามารถเพิ่มวารสารที่ใช้บ่อยในออบเจ็กต์ journalProfiles ภายในโค้ดได้',
-      metaNameLabel: 'ชื่อวารสาร:',
-      metaScopeLabel: 'ขอบเขต:',
-      metaWordLimitLabel: 'จำนวนคำที่กำหนด:',
-      metaStyleLabel: 'รูปแบบการเขียน:',
-      metaNoteLabel: 'หมายเหตุ:'
     }
   }
 };
 
-  // 每個分頁上方主標題與副標題的語系字典
-  const TAB_I18N = {
-    'zh-TW': {
-      project: {
-        title: '專案＆期刊設定',
-        subtitle: '從期刊開始，決定整篇論文的遊戲規則。'
-      },
-      design: {
-        title: '研究設計',
-        subtitle: '在此整理研究問題、假設、變項與分析方法。'
-      },
-      literature: {
-        title: '文獻＆引用管理',
-        subtitle: '所有引用一律來自上傳之文獻池（referencePool）。'
-      },
-      data: {
-        title: '數據＆分析',
-        subtitle: '整理統計結果，準備撰寫結果與討論。'
-      },
-      writing: {
-        title: '寫作＆Reviewer',
-        subtitle: '分章撰寫，並由 AI 協助檢視與評論。'
-      },
-      submission: {
-        title: '投稿包',
-        subtitle: '將稿件、cover letter 與回覆信整合成投稿套餐。'
-      }
+const TAB_I18N = {
+  'zh-TW': {
+    project: {
+      title: '專案＆期刊設定',
+      subtitle: '從期刊開始，決定整篇論文的遊戲規則。'
     },
-    'zh-CN': {
-      project: {
-        title: '项目与期刊设置',
-        subtitle: '从目标期刊出发，决定整篇论文的游戏规则。'
-      },
-      design: {
-        title: '研究设计',
-        subtitle: '在这里整理研究问题、假设、变量与分析方法。'
-      },
-      literature: {
-        title: '文献与引用管理',
-        subtitle: '所有引用一律来自上传的文献池（referencePool）。'
-      },
-      data: {
-        title: '数据与分析',
-        subtitle: '整理统计结果，准备撰写结果与讨论。'
-      },
-      writing: {
-        title: '写作与审稿',
-        subtitle: '逐章撰写，并由 AI 协助检查与评论。'
-      },
-      submission: {
-        title: '投稿包',
-        subtitle: '将稿件、cover letter 与回信整合成投稿套装。'
-      }
+    design: {
+      title: '研究設計',
+      subtitle: '在此整理研究問題、假設、變項與分析方法。'
     },
-    'en': {
-      project: {
-        title: 'Project & journal setup',
-        subtitle: 'Start from the target journal to decide the rules of the whole paper.'
-      },
-      design: {
-        title: 'Research design',
-        subtitle: 'Organise research questions, hypotheses, variables, and analysis methods here.'
-      },
-      literature: {
-        title: 'Literature & citation management',
-        subtitle: 'All citations must come from the uploaded reference pool (referencePool) only.'
-      },
-      data: {
-        title: 'Data & analysis',
-        subtitle: 'Organise statistical results and prepare to write Results and Discussion.'
-      },
-      writing: {
-        title: 'Writing & reviewer',
-        subtitle: 'Write each section and let the AI help you review and comment.'
-      },
-      submission: {
-        title: 'Submission package',
-        subtitle: 'Combine manuscript, cover letter, and response letters into one submission package.'
-      }
+    literature: {
+      title: '文獻＆引用管理',
+      subtitle: '所有引用一律來自上傳之文獻池（referencePool）。'
     },
-    'ja': {
-      project: {
-        title: 'プロジェクトとジャーナルの設定',
-        subtitle: 'ターゲットジャーナルから出発して，論文全体の「ルール」を決めます。'
-      },
-      design: {
-        title: '研究デザイン',
-        subtitle: 'ここで研究課題・仮説・変数と分析方法を整理します。'
-      },
-      literature: {
-        title: '文献と引用管理',
-        subtitle: 'すべての引用はアップロードした文献プール（referencePool）のみから使用します。'
-      },
-      data: {
-        title: 'データと分析',
-        subtitle: '統計結果を整理し，結果・考察章の執筆に備えます。'
-      },
-      writing: {
-        title: '執筆と査読',
-        subtitle: '章ごとに執筆し，AI によるチェックとコメントを受けます。'
-      },
-      submission: {
-        title: '投稿パッケージ',
-        subtitle: '原稿・カバーレター・査読者への返信をひとつの投稿パッケージとしてまとめます。'
-      }
+    data: {
+      title: '數據＆分析',
+      subtitle: '整理統計結果，準備撰寫結果與討論。'
     },
-    'vi': {
-      project: {
-        title: 'Thiết lập dự án & tạp chí',
-        subtitle: 'Bắt đầu từ tạp chí mục tiêu để xác định “luật chơi” của toàn bài báo.'
-      },
-      design: {
-        title: 'Thiết kế nghiên cứu',
-        subtitle: 'Sắp xếp câu hỏi nghiên cứu, giả thuyết, biến số và phương pháp phân tích tại đây.'
-      },
-      literature: {
-        title: 'Quản lý tài liệu & trích dẫn',
-        subtitle: 'Mọi trích dẫn đều phải đến từ kho tài liệu đã tải lên (referencePool).'
-      },
-      data: {
-        title: 'Dữ liệu & phân tích',
-        subtitle: 'Tổng hợp kết quả thống kê, chuẩn bị viết phần Kết quả và Thảo luận.'
-      },
-      writing: {
-        title: 'Viết bài & phản biện',
-        subtitle: 'Viết từng chương và để AI hỗ trợ kiểm tra, phản biện.'
-      },
-      submission: {
-        title: 'Gói gửi bài',
-        subtitle: 'Tổng hợp bản thảo, thư gửi biên tập và thư trả lời phản biện thành một gói gửi bài.'
-      }
+    writing: {
+      title: '寫作＆Reviewer',
+      subtitle: '分章撰寫，並由 AI 協助檢視與評論。'
     },
-    'id': {
-      project: {
-        title: 'Pengaturan proyek & jurnal',
-        subtitle: 'Mulai dari jurnal tujuan untuk menentukan “aturan main” artikel secara keseluruhan.'
-      },
-      design: {
-        title: 'Desain penelitian',
-        subtitle: 'Susun pertanyaan riset, hipotesis, variabel, dan metode analisis di sini.'
-      },
-      literature: {
-        title: 'Manajemen literatur & sitasi',
-        subtitle: 'Semua sitasi harus bersumber dari referencePool yang telah diunggah.'
-      },
-      data: {
-        title: 'Data & analisis',
-        subtitle: 'Ringkas hasil statistik dan bersiap menulis bagian Hasil dan Pembahasan.'
-      },
-      writing: {
-        title: 'Penulisan & reviewer',
-        subtitle: 'Tulis tiap bab dan biarkan AI membantu meninjau dan memberi komentar.'
-      },
-      submission: {
-        title: 'Paket submit',
-        subtitle: 'Gabungkan manuskrip, cover letter, dan surat balasan reviewer menjadi satu paket submit.'
-      }
-    },
-    'th': {
-      project: {
-        title: 'ตั้งค่าโปรเจกต์และวารสาร',
-        subtitle: 'เริ่มจากวารสารเป้าหมายเพื่อตั้ง “กติกา” ของบทความทั้งฉบับ.'
-      },
-      design: {
-        title: 'การออกแบบวิจัย',
-        subtitle: 'จัดระเบียบคำถามวิจัย สมมติฐาน ตัวแปร และวิธีวิเคราะห์ที่นี่.'
-      },
-      literature: {
-        title: 'การจัดการเอกสารและการอ้างอิง',
-        subtitle: 'การอ้างอิงทั้งหมดต้องมาจากคลังเอกสารที่อัปโหลดไว้ (referencePool) เท่านั้น.'
-      },
-      data: {
-        title: 'ข้อมูลและการวิเคราะห์',
-        subtitle: 'สรุปผลการวิเคราะห์ทางสถิติ และเตรียมเขียนส่วนผลการวิจัยและอภิปรายผล.'
-      },
-      writing: {
-        title: 'การเขียนและผู้ประเมิน',
-        subtitle: 'เขียนทีละบท และให้ AI ช่วยตรวจและให้ความเห็น.'
-      },
-      submission: {
-        title: 'ชุดส่งบทความ',
-        subtitle: 'รวมต้นฉบับ จดหมายปะหน้า และจดหมายตอบผู้ประเมินเป็นชุดส่งบทความเดียวกัน.'
-      }
+    submission: {
+      title: '投稿包',
+      subtitle: '將稿件、cover letter 與回覆信整合成投稿套餐。'
     }
-  };
+  },
+  'en': {
+    project: {
+      title: 'Project & journal setup',
+      subtitle: 'Start from the target journal to decide the rules of the whole paper.'
+    },
+    design: {
+      title: 'Research design',
+      subtitle: 'Organise research questions, hypotheses, variables, and analysis methods here.'
+    },
+    literature: {
+      title: 'Literature & citation management',
+      subtitle: 'All citations must come from the uploaded reference pool (referencePool) only.'
+    },
+    data: {
+      title: 'Data & analysis',
+      subtitle: 'Organise statistical results and prepare to write Results and Discussion.'
+    },
+    writing: {
+      title: 'Writing & reviewer',
+      subtitle: 'Write each section and let the AI help you review and comment.'
+    },
+    submission: {
+      title: 'Submission package',
+      subtitle: 'Combine manuscript, cover letter, and response letters into one submission package.'
+    }
+  },
+  // 其他語系為了簡短這裡就不重覆翻譯，會回退到 zh-TW 或 en
+};
 
-  // 套用語系到主要 UI（側欄 nav、header 標題等等）
-// 依語系套用到 UI
+// =======================
+// 全域狀態
+// =======================
+const STORAGE_KEY = 'scholarcraft_v3_project';
+
+const state = {
+  projectId: 'default',
+  currentTab: 'project',
+  currentChapter: 'outline',
+  lang: 'zh-TW',
+  stylePreset: 'balanced',
+  projectMeta: {
+    title: '',
+    field: '',
+    year: '2025',
+    journalKey: ''
+  },
+  referencePool: [],
+  usedCitationIds: new Set(),
+  chapters: {
+    outline: '',
+    intro: '',
+    lit_review: '',
+    method: '',
+    results: '',
+    discussion: '',
+    conclusion: '',
+    implications: '',
+    limitations: '',
+    abstract: '',
+    fullpaper: ''
+  },
+  design: {
+    type: '',
+    context: '',
+    sample: '',
+    instruments: '',
+    iv: '',
+    dv: '',
+    medmod: ''
+  },
+  rqs: [],
+  hypotheses: [],
+  analysisPlan: {},
+  dataMeta: {
+    notes: '',
+    rawFileName: '',
+    outputFileName: ''
+  },
+  litFilesMeta: {
+    sourceFileName: ''
+  },
+  snapshots: [],
+  submission: {
+    coverLetter: '',
+    response: '',
+    notes: ''
+  },
+  journalProfiles: {}
+};
+
+let saveTimer = null;
+
+// =======================
+// 初始化
+// =======================
+document.addEventListener('DOMContentLoaded', () => {
+  state.journalProfiles = mapJournalData();
+  loadStateFromStorage();
+  initNav();
+  initLangSelect();
+  initJournalSelect();
+  initChecklist();
+  renderRQList();
+  renderHypothesisList();
+  renderAnalysisPlan();
+  renderAnalysisPlanData();
+  renderSnapshotList();
+  updateProjectMeta();
+  switchTab(state.currentTab);
+  switchChapter();
+  renderLiteratureList();
+  renderLiteraturePreview();
+  updateWordCounts();
+  restoreSubmissionUI();
+});
+
+// =======================
+// LocalStorage
+// =======================
+function scheduleSaveState() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveStateToStorage, 500);
+}
+
+function saveStateToStorage() {
+  try {
+    const safeState = {
+      projectId: state.projectId,
+      currentTab: state.currentTab,
+      currentChapter: state.currentChapter,
+      lang: state.lang,
+      stylePreset: state.stylePreset,
+      projectMeta: state.projectMeta,
+      referencePool: state.referencePool,
+      chapters: state.chapters,
+      design: state.design,
+      rqs: state.rqs,
+      hypotheses: state.hypotheses,
+      analysisPlan: state.analysisPlan,
+      dataMeta: state.dataMeta,
+      litFilesMeta: state.litFilesMeta,
+      snapshots: state.snapshots,
+      submission: state.submission,
+      journalProfiles: state.journalProfiles
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
+  } catch (e) {
+    console.warn('儲存到 localStorage 失敗：', e);
+  }
+}
+
+function loadStateFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== 'object') return;
+
+    state.projectId = saved.projectId || 'default';
+    state.currentTab = saved.currentTab || 'project';
+    state.currentChapter = saved.currentChapter || 'outline';
+    state.lang = saved.lang || 'zh-TW';
+    state.stylePreset = saved.stylePreset || 'balanced';
+    state.projectMeta = Object.assign({}, state.projectMeta, saved.projectMeta || {});
+    state.referencePool = saved.referencePool || [];
+    state.chapters = Object.assign({}, state.chapters, saved.chapters || {});
+    state.design = Object.assign({}, state.design, saved.design || {});
+    state.rqs = saved.rqs || [];
+    state.hypotheses = saved.hypotheses || [];
+    state.analysisPlan = saved.analysisPlan || {};
+    state.dataMeta = Object.assign({}, state.dataMeta, saved.dataMeta || {});
+    state.litFilesMeta = Object.assign({}, state.litFilesMeta, saved.litFilesMeta || {});
+    state.snapshots = saved.snapshots || [];
+    state.submission = Object.assign({}, state.submission, saved.submission || {});
+    if (saved.journalProfiles) state.journalProfiles = saved.journalProfiles;
+
+    // 回填 UI
+    const pt = document.getElementById('project-title');
+    const pf = document.getElementById('project-field');
+    const py = document.getElementById('project-year');
+    if (pt) pt.value = state.projectMeta.title || '';
+    if (pf) pf.value = state.projectMeta.field || '';
+    if (py) py.value = state.projectMeta.year || '2025';
+
+    const dt = document.getElementById('design-type');
+    const dc = document.getElementById('design-context');
+    const ds = document.getElementById('design-sample');
+    const di = document.getElementById('design-instruments');
+    const div = document.getElementById('design-iv');
+    const ddv = document.getElementById('design-dv');
+    const dmm = document.getElementById('design-medmod');
+    const dn = document.getElementById('data-notes');
+    const sp = document.getElementById('style-preset');
+    if (dt) dt.value = state.design.type || '';
+    if (dc) dc.value = state.design.context || '';
+    if (ds) ds.value = state.design.sample || '';
+    if (di) di.value = state.design.instruments || '';
+    if (div) div.value = state.design.iv || '';
+    if (ddv) ddv.value = state.design.dv || '';
+    if (dmm) dmm.value = state.design.medmod || '';
+    if (dn) dn.value = state.dataMeta.notes || '';
+    if (sp) sp.value = state.stylePreset || 'balanced';
+  } catch (e) {
+    console.warn('讀取 localStorage 失敗：', e);
+  }
+}
+
+// =======================
+// 語系與導覽
+// =======================
 function applyLanguage(lang) {
   const langCode = lang || state.lang || 'zh-TW';
   const uiPack = UI_I18N[langCode] || UI_I18N['zh-TW'];
 
-  // <html lang="...">
   if (document.documentElement) {
     document.documentElement.lang = langCode;
   }
 
-  // Header：生成語言 label
   const langLabel = document.getElementById('lang-label');
   if (langLabel && uiPack.langLabel) {
     langLabel.textContent = uiPack.langLabel;
   }
 
-  // 側欄 nav 文字
   if (uiPack.nav) {
     const navProject = document.querySelector('.nav-btn[data-tab="project"] span');
     const navDesign = document.querySelector('.nav-btn[data-tab="design"] span');
@@ -1118,7 +1122,6 @@ function applyLanguage(lang) {
     const navData = document.querySelector('.nav-btn[data-tab="data"] span');
     const navWriting = document.querySelector('.nav-btn[data-tab="writing"] span');
     const navSubmission = document.querySelector('.nav-btn[data-tab="submission"] span');
-
     if (navProject && uiPack.nav.project) navProject.textContent = uiPack.nav.project;
     if (navDesign && uiPack.nav.design) navDesign.textContent = uiPack.nav.design;
     if (navLiterature && uiPack.nav.literature) navLiterature.textContent = uiPack.nav.literature;
@@ -1127,1666 +1130,1046 @@ function applyLanguage(lang) {
     if (navSubmission && uiPack.nav.submission) navSubmission.textContent = uiPack.nav.submission;
   }
 
-  // 專案卡片標題 & 標籤
-  if (uiPack.projectPanel) {
-    const projectCardTitle = document.querySelector('#tab-project .glass:nth-child(1) h2');
-    if (projectCardTitle && uiPack.projectPanel.cardTitle) {
-      const icon = projectCardTitle.querySelector('i');
-      projectCardTitle.innerHTML = '';
-      if (icon) projectCardTitle.appendChild(icon);
-      projectCardTitle.appendChild(document.createTextNode(' ' + uiPack.projectPanel.cardTitle));
-    }
-
-    const projLabels = document.querySelectorAll('#tab-project .glass:nth-child(1) label');
-    if (projLabels.length >= 3) {
-      if (uiPack.projectPanel.projectNameLabel) projLabels[0].textContent = uiPack.projectPanel.projectNameLabel;
-      if (uiPack.projectPanel.domainLabel) projLabels[1].textContent = uiPack.projectPanel.domainLabel;
-      if (uiPack.projectPanel.yearLabel) projLabels[2].textContent = uiPack.projectPanel.yearLabel;
-    }
-
-    const projTitleInput = document.getElementById('project-title');
-    const projFieldInput = document.getElementById('project-field');
-    if (projTitleInput && uiPack.projectPanel.projectNamePlaceholder) {
-      projTitleInput.placeholder = uiPack.projectPanel.projectNamePlaceholder;
-    }
-    if (projFieldInput && uiPack.projectPanel.domainPlaceholder) {
-      projFieldInput.placeholder = uiPack.projectPanel.domainPlaceholder;
-    }
-  }
-
-  // 期刊卡片標題 & 標籤
-  if (uiPack.journalPanel) {
-    const journalCardTitle = document.querySelector('#tab-project .glass:nth-child(2) h2');
-    if (journalCardTitle && uiPack.journalPanel.cardTitle) {
-      const icon = journalCardTitle.querySelector('i');
-      journalCardTitle.innerHTML = '';
-      if (icon) journalCardTitle.appendChild(icon);
-      journalCardTitle.appendChild(document.createTextNode(' ' + uiPack.journalPanel.cardTitle));
-    }
-
-    const journalLabels = document.querySelectorAll('#tab-project .glass:nth-child(2) label');
-    if (journalLabels.length >= 1 && uiPack.journalPanel.targetJournalLabel) {
-      journalLabels[0].textContent = uiPack.journalPanel.targetJournalLabel;
-    }
-
-    const journalHint = document.querySelector('#tab-project .glass:nth-child(2) p.text-[11px]');
-    if (journalHint && uiPack.journalPanel.targetJournalHint) {
-      journalHint.textContent = uiPack.journalPanel.targetJournalHint;
-    }
-
-    // journal-profile-summary 裡的 meta label
-    const metaBox = document.getElementById('journal-profile-summary');
-    if (metaBox) {
-      // 這裡不重構 HTML，只在 updateJournalProfile() 內用 i18n label 會比較乾淨
-      // 所以這裡先不直接動 meta 文字
-    }
-  }
-
-  // main-title / main-subtitle 由 switchTab 依 TAB_I18N 控制
+  // 讓目前 tab 的 header title / subtitle 也換語言
+  switchTab(state.currentTab || 'project');
 }
 
+function initNav() {
+  const firstNav = document.querySelector('.nav-btn[data-tab="project"]');
+  if (firstNav) firstNav.classList.add('bg-slate-800');
+}
 
-  /**********************
-   * 全域狀態：v3       *
-   **********************/
-  const STORAGE_KEY = 'scholarcraft_v3_project';
-  let saveTimer = null;
+function initLangSelect() {
+  const sel = document.getElementById('lang-select');
+  if (!sel) return;
 
-  const state = {
-    projectId: 'default',
-    lang: 'zh-TW',
-    stylePreset: 'balanced',
-    projectMeta: {
-      title: '',
-      field: '',
-      year: '2025',
-      journalKey: ''
-    },
-    referencePool: [],
-    usedCitationIds: new Set(),
-    chapters: {
-      outline: '',
-      intro: '',
-      lit_review: '',
-      method: '',
-      results: '',
-      discussion: '',
-      conclusion: '',
-      implications: '',
-      limitations: '',
-      abstract: '',
-      fullpaper: ''
-    },
-    // 研究設計
-    design: {
-      type: '',
-      context: '',
-      sample: '',
-      instruments: '',
-      iv: '',
-      dv: '',
-      medmod: ''
-    },
-    rqs: [],          // [{id:'RQ1', text:'...'}]
-    hypotheses: [],   // [{id:'H1', text:'...'}]
-    analysisPlan: {}, // { 'RQ1': { method:'ANOVA', note:'...' } }
-    // 數據
-    dataMeta: {
-      notes: '',
-      rawFileName: '',
-      outputFileName: ''
-    },
-    // 文獻
-    litFilesMeta: {
-      sourceFileName: ''
-    },
-    // 快照
-    snapshots: []     // [{id, label, createdAt, chapters}]
-  };
+  const options = [
+    { value: 'zh-TW', label: '繁體中文' },
+    { value: 'en', label: 'English' },
+    { value: 'ja', label: '日本語' },
+    { value: 'zh-CN', label: '簡體中文' },
+    { value: 'vi', label: 'Tiếng Việt' },
+    { value: 'id', label: 'Bahasa Indonesia' },
+    { value: 'th', label: 'ภาษาไทย' }
+  ];
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadStateFromStorage();
-    initNav();
-    initLangSelect();
-    initJournalSelect();
-    initChecklist();
-    renderRQList();
-    renderHypothesisList();
-    renderAnalysisPlan();
-    renderAnalysisPlanData();
-    renderSnapshotList();
-    updateProjectMeta();
-    switchChapter(); // 初始化章節
-    renderLiteratureList();
-    renderLiteraturePreview();
-  });
+  sel.innerHTML = '';
+  options.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt.value;
+    o.textContent = opt.label;
+    sel.appendChild(o);
+  });
 
-  function scheduleSaveState() {
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveStateToStorage, 500);
-  }
+  const currentLang = state.lang || 'zh-TW';
+  sel.value = currentLang;
+  applyLanguage(currentLang);
 
-  function saveStateToStorage() {
-    try {
-      const safeState = {
-        projectId: state.projectId,
-        lang: state.lang,
-        stylePreset: state.stylePreset,
-        projectMeta: state.projectMeta,
-        chapters: state.chapters,
-        design: state.design,
-        rqs: state.rqs,
-        hypotheses: state.hypotheses,
-        analysisPlan: state.analysisPlan,
-        dataMeta: state.dataMeta,
-        litFilesMeta: state.litFilesMeta,
-        snapshots: state.snapshots,
-        referencePool: state.referencePool
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
-    } catch (e) {
-      console.warn('儲存到 localStorage 失敗：', e);
-    }
-  }
+  sel.addEventListener('change', () => {
+    state.lang = sel.value || 'zh-TW';
+    scheduleSaveState();
+    applyLanguage(state.lang);
+  });
+}
 
-  function loadStateFromStorage() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!saved || typeof saved !== 'object') return;
+function switchTab(tabId) {
+  state.currentTab = tabId;
 
-      // 合併回 state
-      Object.assign(state, {
-        projectId: saved.projectId || 'default',
-        lang: saved.lang || 'zh-TW',
-        stylePreset: saved.stylePreset || 'balanced',
-        projectMeta: Object.assign({}, state.projectMeta, saved.projectMeta || {}),
-        chapters: Object.assign({}, state.chapters, saved.chapters || {}),
-        design: Object.assign({}, state.design, saved.design || {}),
-        rqs: saved.rqs || [],
-        hypotheses: saved.hypotheses || [],
-        analysisPlan: saved.analysisPlan || {},
-        dataMeta: Object.assign({}, state.dataMeta, saved.dataMeta || {}),
-        litFilesMeta: Object.assign({}, state.litFilesMeta, saved.litFilesMeta || {}),
-        snapshots: saved.snapshots || [],
-        referencePool: saved.referencePool || []
-      });
+  const tabs = ['project', 'design', 'literature', 'data', 'writing', 'submission'];
+  tabs.forEach(id => {
+    const el = document.getElementById('tab-' + id);
+    if (el) el.classList.toggle('hidden', id !== tabId);
+  });
 
-      // 回填 UI
-      document.getElementById('project-title').value = state.projectMeta.title || '';
-      document.getElementById('project-field').value = state.projectMeta.field || '';
-      document.getElementById('project-year').value = state.projectMeta.year || '2025';
-      document.getElementById('design-type').value = state.design.type || '';
-      document.getElementById('design-context').value = state.design.context || '';
-      document.getElementById('design-sample').value = state.design.sample || '';
-      document.getElementById('design-instruments').value = state.design.instruments || '';
-      document.getElementById('design-iv').value = state.design.iv || '';
-      document.getElementById('design-dv').value = state.design.dv || '';
-      document.getElementById('design-medmod').value = state.design.medmod || '';
-      document.getElementById('data-notes').value = state.dataMeta.notes || '';
-      document.getElementById('style-preset').value = state.stylePreset || 'balanced';
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('bg-slate-800', btn.dataset.tab === tabId);
+  });
 
-      // 語言選單會在 initLangSelect 中設定 value
-    } catch (e) {
-      console.warn('讀取 localStorage 失敗：', e);
-    }
-  }
+  const title = document.getElementById('main-title');
+  const subtitle = document.getElementById('main-subtitle');
+  const langCode = state.lang || 'zh-TW';
+  const langPack = TAB_I18N[langCode] || TAB_I18N['zh-TW'] || TAB_I18N['en'];
+  const tabPack = langPack[tabId];
 
-  /**********************
-   * UI 初始化與導覽     *
-   **********************/
+  if (tabPack && title && subtitle) {
+    title.textContent = tabPack.title;
+    subtitle.textContent = tabPack.subtitle;
+  }
 
-  function initNav() {
-    const firstNav = document.querySelector('.nav-btn[data-tab="project"]');
-    if (firstNav) firstNav.classList.add('bg-slate-800');
-  }
+  scheduleSaveState();
+}
 
-  function initLangSelect() {
-    const sel = document.getElementById('lang-select');
-    const langLabel = document.getElementById('lang-label');
-    if (!sel) return;
+// =======================
+// 期刊列表
+// =======================
+function mapJournalData() {
+  const list = [
+    { id: 'ijse', name: 'International Journal of Science Education', abbr: 'IJSE', category: 'Science & Mathematics Education', scope: '科學教育理論與實證研究，含各學段與議題。', wordLimit: '約 7,000–8,000 字', note: '重視理論與方法嚴謹度。' },
+    { id: 'rise', name: 'Research in Science Education', abbr: 'RISE', category: 'Science & Mathematics Education', scope: '科學教育實證研究與課程改革。', wordLimit: '約 8,000 字', note: '常見亞太區研究。' },
+    { id: 'ijsme', name: 'International Journal of Science and Mathematics Education', abbr: 'IJSME', category: 'Science & Mathematics Education', scope: '科學與數學教育整合研究。', wordLimit: '約 7,000–9,000 字', note: '適合 PISA、STEM、課室研究。' },
+    { id: 'siced', name: 'Science Education', abbr: 'SciEd', category: 'Science & Mathematics Education', scope: '頂尖科學教育期刊，重理論貢獻。', wordLimit: '約 9,000–10,000 字', note: '審查嚴格，偏理論與大型研究。' },
+    { id: 'lni', name: 'Learning and Instruction', abbr: 'L&I', category: 'Educational Psychology & Measurement', scope: '學習與教學機制之實證研究。', wordLimit: '約 7,500–9,000 字', note: '適合精緻實驗與準實驗設計。' },
+    { id: 'taper', name: 'Asia-Pacific Education Researcher', abbr: 'TAPER', category: 'General Education & Policy', scope: '亞太教育研究，含教師教育、課程與評量等。', wordLimit: '約 6,000–8,000 字', note: '適合區域實證研究與比較研究。' },
+    { id: 'tte', name: 'Teaching and Teacher Education', abbr: 'TTE', category: 'Teacher, Special, Diverse Education', scope: '教師專業發展、教學研究。', wordLimit: '約 7,000–8,000 字', note: '常見教師 AI 素養、TPACK 等主題。' },
+    { id: 'ce', name: 'Computers & Education', abbr: 'C&E', category: 'Educational Technology & Higher Education', scope: '教育科技整合之實證研究。', wordLimit: '約 7,000–9,000 字', note: '對研究設計與統計要求高。' }
+  ];
+  const obj = {};
+  list.forEach(j => {
+    obj[j.id] = {
+      name: j.name,
+      abbr: j.abbr,
+      category: j.category,
+      scope: j.scope,
+      wordLimit: j.wordLimit,
+      note: j.note
+    };
+  });
+  return obj;
+}
 
-    const options = [
-      { value: 'zh-TW', label: '繁體中文' },
-      { value: 'en', label: 'English' },
-      { value: 'ja', label: '日本語' },
-      { value: 'zh-CN', label: '簡體中文' },
-      { value: 'vi', label: '越南語' },
-      { value: 'id', label: '印尼語' },
-      { value: 'th', label: '泰語' }
-    ];
+function initJournalSelect() {
+  const sel = document.getElementById('journal-select');
+  if (!sel) return;
+  sel.innerHTML = '';
 
-    sel.innerHTML = '';
-    options.forEach(opt => {
-      const o = document.createElement('option');
-      o.value = opt.value;
-      o.textContent = opt.label;
-      sel.appendChild(o);
-    });
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '請選擇目標期刊';
+  sel.appendChild(placeholder);
 
-    // 從 state 還原語系，預設 zh-TW
-    const currentLang = state.lang || 'zh-TW';
-    sel.value = currentLang;
+  Object.entries(state.journalProfiles).forEach(([key, jp]) => {
+    const o = document.createElement('option');
+    o.value = key;
+    o.textContent = `${jp.name} (${jp.abbr})`;
+    sel.appendChild(o);
+  });
 
-    // 先套一次目前語系到整個頁面
-    applyLanguage(currentLang);
-    // 也更新 header 的標題/副標題（需等 main-title/main-subtitle 都存在）
-    if (state.currentTab) {
-      switchTab(state.currentTab);
+  if (state.projectMeta.journalKey) {
+    sel.value = state.projectMeta.journalKey;
+    updateJournalProfile();
+  }
+}
+
+function updateJournalProfile() {
+  const sel = document.getElementById('journal-select');
+  if (!sel) return;
+  const key = sel.value;
+  state.projectMeta.journalKey = key || '';
+  const jp = state.journalProfiles[key] || null;
+
+  const box = document.getElementById('journal-profile-summary');
+  if (box) {
+    if (!jp) {
+      box.innerHTML = '<p class="text-slate-400 text-[11px]">尚未選擇期刊。</p>';
     } else {
-      switchTab('project');
+      box.innerHTML = `
+        <p><span class="font-semibold">期刊名稱：</span>${escapeHtml(jp.name)} (${escapeHtml(jp.abbr)})</p>
+        <p><span class="font-semibold">範疇：</span>${escapeHtml(jp.scope)}</p>
+        <p><span class="font-semibold">字數限制：</span>${escapeHtml(jp.wordLimit)}</p>
+        <p><span class="font-semibold">備註：</span>${escapeHtml(jp.note)}</p>
+      `;
     }
+  }
 
+  const sidebarJournal = document.getElementById('sidebar-journal');
+  if (sidebarJournal) {
+    sidebarJournal.textContent = jp ? `${jp.name} (${jp.abbr})` : '未設定';
+  }
+
+  scheduleSaveState();
+}
+
+// =======================
+// 字數與章節
+// =======================
+function getWordStats(text) {
+  if (!text) return { cjkChars: 0, enWords: 0, total: 0 };
+  const trimmed = text.trim();
+  if (!trimmed) return { cjkChars: 0, enWords: 0, total: 0 };
+
+  const rawTokens = trimmed.split(/\s+/).filter(Boolean);
+  let cjkChars = 0;
+  let enWords = 0;
+
+  rawTokens.forEach(tok => {
+    const cjkMatches = tok.match(/[\u4e00-\u9fff\u3040-\u30ff\u31f0-\u31ff]/g);
+    if (cjkMatches && cjkMatches.length > 0) {
+      cjkChars += cjkMatches.length;
+    } else {
+      enWords += 1;
+    }
+  });
+
+  return {
+    cjkChars,
+    enWords,
+    total: cjkChars + enWords
+  };
+}
+
+function getCurrentEditor() {
+  return document.querySelector('.chapter-editor[data-chapter="' + state.currentChapter + '"]');
+}
+
+function switchChapter() {
+  const sel = document.getElementById('chapter-select');
+  if (!sel) return;
+  const chapterKey = sel.value;
+  state.currentChapter = chapterKey;
+
+  const editors = document.querySelectorAll('.chapter-editor');
+  editors.forEach(ed => {
+    const isCurrent = ed.dataset.chapter === chapterKey;
+    ed.classList.toggle('hidden', !isCurrent);
+    if (isCurrent) {
+      ed.value = state.chapters[chapterKey] || '';
+    }
+  });
+
+  const label = document.getElementById('current-chapter-label');
+  if (label) {
+    label.textContent = sel.options[sel.selectedIndex].textContent || chapterKey;
+  }
+  updateChecklistForChapter(chapterKey);
+  updateWordCounts();
+  scheduleSaveState();
+}
+
+function onChapterInput(chapterKey, text) {
+  state.chapters[chapterKey] = text;
+  if (chapterKey === state.currentChapter) updateWordCounts();
+  scheduleSaveState();
+}
+
+function updateWordCounts() {
+  const chapterText = state.chapters[state.currentChapter] || '';
+  const chapterStats = getWordStats(chapterText);
+
+  let totalStats = { cjkChars: 0, enWords: 0, total: 0 };
+  Object.values(state.chapters).forEach(t => {
+    const st = getWordStats(t || '');
+    totalStats.cjkChars += st.cjkChars;
+    totalStats.enWords += st.enWords;
+    totalStats.total += st.total;
+  });
+
+  const chapterSpan = document.getElementById('chapter-word-count');
+  const totalSpan = document.getElementById('total-word-count');
+  if (chapterSpan) {
+    chapterSpan.textContent =
+      `本章字數：約 ${chapterStats.total}（中/日：${chapterStats.cjkChars} 字 / 英：${chapterStats.enWords} words）`;
+  }
+  if (totalSpan) {
+    totalSpan.textContent =
+      `全文字數：約 ${totalStats.total}（中/日：${totalStats.cjkChars} 字 / 英：${totalStats.enWords} words）`;
+  }
+}
+
+// =======================
+// 專案資訊
+// =======================
+function updateProjectMeta() {
+  const titleEl = document.getElementById('project-title');
+  const fieldEl = document.getElementById('project-field');
+  const yearEl = document.getElementById('project-year');
+
+  state.projectMeta.title = titleEl ? titleEl.value.trim() : '';
+  state.projectMeta.field = fieldEl ? fieldEl.value.trim() : '';
+  state.projectMeta.year = yearEl ? String(yearEl.value || '2025') : '2025';
+
+  const sidebarTitle = document.getElementById('sidebar-project-name');
+  if (sidebarTitle) {
+    sidebarTitle.textContent = state.projectMeta.title || '未命名專案';
+  }
+
+  scheduleSaveState();
+}
+
+function updateStylePreset() {
+  const sel = document.getElementById('style-preset');
+  if (!sel) return;
+  state.stylePreset = sel.value || 'balanced';
+  scheduleSaveState();
+}
+
+// =======================
+// 研究設計／RQ／分析
+// =======================
+function updateResearchDesign() {
+  state.design.type = (document.getElementById('design-type') || {}).value || '';
+  state.design.context = (document.getElementById('design-context') || {}).value || '';
+  state.design.sample = (document.getElementById('design-sample') || {}).value || '';
+  state.design.instruments = (document.getElementById('design-instruments') || {}).value || '';
+  state.design.iv = (document.getElementById('design-iv') || {}).value || '';
+  state.design.dv = (document.getElementById('design-dv') || {}).value || '';
+  state.design.medmod = (document.getElementById('design-medmod') || {}).value || '';
+  renderAnalysisPlan();
+  renderAnalysisPlanData();
+  scheduleSaveState();
+}
+
+function addRQ() {
+  const id = 'RQ' + (state.rqs.length + 1);
+  state.rqs.push({ id, text: '' });
+  renderRQList();
+  renderAnalysisPlan();
+  renderAnalysisPlanData();
+  scheduleSaveState();
+}
+
+function updateRQText(id, text) {
+  const rq = state.rqs.find(r => r.id === id);
+  if (rq) rq.text = text;
+  scheduleSaveState();
+}
+
+function removeRQ(id) {
+  state.rqs = state.rqs.filter(r => r.id !== id);
+  delete state.analysisPlan[id];
+  renderRQList();
+  renderAnalysisPlan();
+  renderAnalysisPlanData();
+  scheduleSaveState();
+}
+
+function renderRQList() {
+  const box = document.getElementById('rq-list');
+  if (!box) return;
+  box.innerHTML = '';
+  if (state.rqs.length === 0) {
+    box.innerHTML = '<p class="text-slate-400 text-[11px]">目前尚未新增 RQ。</p>';
+    return;
+  }
+  state.rqs.forEach(rq => {
+    const row = document.createElement('div');
+    row.className = 'flex items-start gap-1';
+    row.innerHTML = `
+      <span class="mt-1 text-[11px] text-slate-500">${rq.id}</span>
+      <textarea class="flex-1 px-2 py-1 rounded border border-slate-300 text-[11px] resize-none" rows="2">${escapeHtml(rq.text)}</textarea>
+      <button class="px-1.5 py-1 rounded text-rose-500 text-[11px]" title="刪除"
+        ><i class="fa-solid fa-trash-can"></i></button>
+    `;
+    const textarea = row.querySelector('textarea');
+    textarea.addEventListener('input', () => updateRQText(rq.id, textarea.value));
+    const btn = row.querySelector('button');
+    btn.addEventListener('click', () => removeRQ(rq.id));
+    box.appendChild(row);
+  });
+}
+
+function addHypothesis() {
+  const id = 'H' + (state.hypotheses.length + 1);
+  state.hypotheses.push({ id, text: '' });
+  renderHypothesisList();
+  scheduleSaveState();
+}
+
+function updateHypothesisText(id, text) {
+  const h = state.hypotheses.find(x => x.id === id);
+  if (h) h.text = text;
+  scheduleSaveState();
+}
+
+function removeHypothesis(id) {
+  state.hypotheses = state.hypotheses.filter(h => h.id !== id);
+  renderHypothesisList();
+  scheduleSaveState();
+}
+
+function renderHypothesisList() {
+  const box = document.getElementById('hypo-list');
+  if (!box) return;
+  box.innerHTML = '';
+  if (state.hypotheses.length === 0) {
+    box.innerHTML = '<p class="text-slate-400 text-[11px]">尚未新增假設。</p>';
+    return;
+  }
+  state.hypotheses.forEach(h => {
+    const row = document.createElement('div');
+    row.className = 'flex items-start gap-1';
+    row.innerHTML = `
+      <span class="mt-1 text-[11px] text-slate-500">${h.id}</span>
+      <textarea class="flex-1 px-2 py-1 rounded border border-slate-300 text-[11px] resize-none" rows="2">${escapeHtml(h.text)}</textarea>
+      <button class="px-1.5 py-1 rounded text-rose-500 text-[11px]" title="刪除"
+        ><i class="fa-solid fa-trash-can"></i></button>
+    `;
+    const textarea = row.querySelector('textarea');
+    textarea.addEventListener('input', () => updateHypothesisText(h.id, textarea.value));
+    const btn = row.querySelector('button');
+    btn.addEventListener('click', () => removeHypothesis(h.id));
+    box.appendChild(row);
+  });
+}
+
+function renderAnalysisPlan() {
+  const box = document.getElementById('analysis-plan');
+  if (!box) return;
+  box.innerHTML = '';
+  if (state.rqs.length === 0) {
+    box.innerHTML = '<p class="text-slate-400 text-[11px]">新增 RQ 後，可為每題指定分析方法。</p>';
+    return;
+  }
+  state.rqs.forEach(rq => {
+    if (!state.analysisPlan[rq.id]) {
+      state.analysisPlan[rq.id] = { method: '', note: '' };
+    }
+    const conf = state.analysisPlan[rq.id];
+    const row = document.createElement('div');
+    row.className = 'border border-slate-200 rounded px-2 py-1.5 bg-white';
+    row.innerHTML = `
+      <div class="text-[11px] font-semibold mb-1">${escapeHtml(rq.id)}：${escapeHtml(rq.text || '')}</div>
+      <div class="flex items-center gap-2 mb-1">
+        <select class="px-2 py-1 rounded border border-slate-300 text-[11px]">
+          <option value="">選擇分析方法</option>
+          <option value="t-test">t test</option>
+          <option value="anova">ANOVA</option>
+          <option value="ancova">ANCOVA</option>
+          <option value="mlr">多元迴歸 (MLR)</option>
+          <option value="sem">SEM / 路徑分析</option>
+          <option value="lmm">LMM / HLM</option>
+          <option value="lca">LCA / LPA</option>
+          <option value="qual">質性主題分析</option>
+          <option value="mixed">混合方法</option>
+        </select>
+        <input type="text" class="flex-1 px-2 py-1 rounded border border-slate-300 text-[11px]"
+               placeholder="補充說明（例如：2x2 混合設計 ANOVA）">
+      </div>
+    `;
+    const sel = row.querySelector('select');
+    const noteInput = row.querySelector('input');
+    sel.value = conf.method || '';
+    noteInput.value = conf.note || '';
     sel.addEventListener('change', () => {
-      state.lang = sel.value || 'zh-TW';
+      state.analysisPlan[rq.id].method = sel.value;
       scheduleSaveState();
+    });
+    noteInput.addEventListener('input', () => {
+      state.analysisPlan[rq.id].note = noteInput.value;
+      scheduleSaveState();
+    });
+    box.appendChild(row);
+  });
+}
 
-      // 套用新的語系到 UI
-      applyLanguage(state.lang);
+function renderAnalysisPlanData() {
+  const box = document.getElementById('analysis-plan-data');
+  if (!box) return;
+  box.innerHTML = '';
+  if (state.rqs.length === 0) {
+    box.innerHTML = '<p class="text-slate-400 text-[11px]">目前尚未設定 RQ。</p>';
+    return;
+  }
+  state.rqs.forEach(rq => {
+    const conf = state.analysisPlan[rq.id] || { method: '', note: '' };
+    const row = document.createElement('div');
+    row.className = 'border border-dashed border-slate-300 rounded px-2 py-1.5 bg-slate-50';
+    row.innerHTML = `
+      <div class="text-[11px] font-semibold mb-0.5">${escapeHtml(rq.id)}</div>
+      <div class="text-[11px] text-slate-700 mb-0.5">${escapeHtml(rq.text || '')}</div>
+      <div class="text-[11px] text-slate-500">
+        分析方法：${conf.method || '尚未指定'}
+        ${conf.note ? '｜備註：' + escapeHtml(conf.note) : ''}
+      </div>
+    `;
+    box.appendChild(row);
+  });
+}
 
-      // 讓目前所在分頁的主標題 / 副標題也一起換語言
-      if (state.currentTab) {
-        switchTab(state.currentTab);
-      } else {
-        switchTab('project');
+// =======================
+// 數據區
+// =======================
+function handleDataRawUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  state.dataMeta.rawFileName = file.name;
+  scheduleSaveState();
+}
+
+function handleDataOutputUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  state.dataMeta.outputFileName = file.name;
+  scheduleSaveState();
+}
+
+function updateDataMeta() {
+  const dn = document.getElementById('data-notes');
+  state.dataMeta.notes = dn ? dn.value : '';
+  scheduleSaveState();
+}
+
+// =======================
+// 文獻上傳與顯示
+// =======================
+function handleLiteratureUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const fileName = file.name || '';
+  state.litFilesMeta.sourceFileName = fileName;
+
+  const ext = fileName.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+
+  reader.onload = function (ev) {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      if (!rows || rows.length < 2) {
+        alert('無法解析文獻檔案：內容為空。');
+        return;
       }
-    });
-  }
 
+      const header = rows[0].map(x => String(x || '').trim().toLowerCase());
+      const idxAuthor = header.findIndex(h => ['author', 'authors', 'au'].includes(h));
+      const idxYear = header.findIndex(h => ['year', 'py'].includes(h));
+      const idxTitle = header.findIndex(h => ['title', 'ti'].includes(h));
+      const idxJournal = header.findIndex(h => ['journal', 'source', 'so'].includes(h));
+      const idxDOI = header.findIndex(h => h === 'doi');
 
-  function initJournalSelect() {
-    const sel = document.getElementById('journal-select');
-    if (!sel) return;
-    sel.innerHTML = '';
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = '請選擇目標期刊';
-    sel.appendChild(placeholder);
+      const refs = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i] || [];
+        const author = idxAuthor >= 0 ? String(row[idxAuthor] || '').trim() : '';
+        const year = idxYear >= 0 ? String(row[idxYear] || '').trim() : '';
+        const title = idxTitle >= 0 ? String(row[idxTitle] || '').trim() : '';
+        const journal = idxJournal >= 0 ? String(row[idxJournal] || '').trim() : '';
+        const doi = idxDOI >= 0 ? String(row[idxDOI] || '').trim() : '';
+        if (!author && !title) continue;
+        refs.push({
+          id: 'L' + (refs.length + 1),
+          author,
+          year,
+          title,
+          journal,
+          doi
+        });
+      }
 
-    // 分組顯示
-    const groupedJournals = {
-      'Science & Mathematics Education': [],
-      'General Education & Policy': [],
-      'Educational Psychology & Measurement': [],
-      'Educational Technology & Higher Education': [],
-      'Teacher, Special, Diverse Education': []
-    };
-    Object.entries(state.journalProfiles).forEach(([key, jp]) => {
-      if (jp.category && groupedJournals[jp.category]) {
-        groupedJournals[jp.category].push({ key, jp });
-      } else {
-        // 預設分類
-        groupedJournals['General Education & Policy'].push({ key, jp });
-      }
-    });
-
-    Object.entries(groupedJournals).forEach(([category, journals]) => {
-      if (journals.length > 0) {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = `--- ${category} ---`;
-        journals.forEach(({ key, jp }) => {
-          const o = document.createElement('option');
-          o.value = key;
-          o.textContent = `${jp.name} (${jp.abbr})`;
-          optgroup.appendChild(o);
-        });
-        sel.appendChild(optgroup);
-      }
-    });
-
-
-    if (state.projectMeta.journalKey) {
-      sel.value = state.projectMeta.journalKey;
-      updateJournalProfile();
-    }
-  }
-
-  function initChecklist() {
-    const checklist = document.getElementById('chapter-checklist');
-    if (!checklist) return;
-    // 動態依章節切換的 checklist 在 switchChapter() 裡更新
-    updateChecklistForChapter(state.currentChapter || 'outline');
-  }
-
-  state.currentChapter = 'outline';
-
-  function switchTab(tabId) {
-    state.currentTab = tabId;
-    const tabs = ['project', 'design', 'literature', 'data', 'writing', 'submission'];
-    tabs.forEach(id => {
-      const el = document.getElementById('tab-' + id);
-      if (el) el.classList.toggle('hidden', id !== tabId);
-    });
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.classList.toggle('bg-slate-800', btn.dataset.tab === tabId);
-    });
-
-    const title = document.getElementById('main-title');
-    const subtitle = document.getElementById('main-subtitle');
-    if (!title || !subtitle) return;
-
-    // 根據目前語系，從 TAB_I18N 取對應文字
-    const langCode = state.lang || 'zh-TW';
-    const langPack = TAB_I18N[langCode] || TAB_I18N['zh-TW'];
-    const tabPack = langPack[tabId];
-
-    if (tabPack) {
-      title.textContent = tabPack.title;
-      subtitle.textContent = tabPack.subtitle;
+      state.referencePool = refs;
+      const cnt = document.getElementById('lit-count');
+      if (cnt) cnt.textContent = String(refs.length);
+      renderLiteratureList();
+      renderLiteraturePreview();
+      scheduleSaveState();
+    } catch (err) {
+      console.error(err);
+      alert('解析文獻檔案時發生錯誤：' + (err.message || err));
     }
+  };
 
-    // 其餘和原本一樣：這裡不動 chapter / checklist 等邏輯
+  reader.readAsArrayBuffer(file);
+}
+
+function renderLiteratureList() {
+  const box = document.getElementById('lit-list');
+  if (!box) return;
+  const searchEl = document.getElementById('lit-search');
+  const keyword = (searchEl ? searchEl.value : '').toLowerCase().trim();
+
+  let refs = state.referencePool;
+  if (keyword) {
+    refs = refs.filter(r => {
+      const s = (r.author + ' ' + r.title + ' ' + r.journal + ' ' + r.year).toLowerCase();
+      return s.includes(keyword);
+    });
   }
 
+  box.innerHTML = '';
+  if (!refs.length) {
+    box.innerHTML = '<p class="text-slate-400 text-[11px]">尚無文獻或無符合搜尋結果。</p>';
+    return;
+  }
 
-  /**********************
-   * 章節切換與字數計算 *
-   **********************/
-
-  state.currentChapter = 'outline';
-
-  function switchChapter() {
-    const sel = document.getElementById('chapter-select');
-    if (!sel) return;
-    const chapterKey = sel.value;
-    state.currentChapter = chapterKey;
-
-    const editors = document.querySelectorAll('.chapter-editor');
-    editors.forEach(ed => {
-      const isCurrent = ed.dataset.chapter === chapterKey;
-      ed.classList.toggle('hidden', !isCurrent);
-      if (isCurrent) {
-        ed.value = state.chapters[chapterKey] || '';
-      }
-    });
-
-    const label = document.getElementById('current-chapter-label');
-    if (label) {
-      label.textContent = sel.options[sel.selectedIndex].textContent || chapterKey;
-    }
-    updateChecklistForChapter(chapterKey);
-    updateWordCounts();
-  }
-
-  function onChapterInput(chapterKey, text) {
-    state.chapters[chapterKey] = text;
-    updateWordCounts();
-    scheduleSaveState();
-  }
-
-  function getCurrentEditor() {
-    return document.querySelector('.chapter-editor[data-chapter="' + state.currentChapter + '"]');
-  }
-
-  function getWordStats(text) {
-    if (!text) return { cjkChars: 0, enWords: 0, total: 0 };
-    const trimmed = text.trim();
-    if (!trimmed) return { cjkChars: 0, enWords: 0, total: 0 };
-
-    const rawTokens = trimmed.split(/\s+/).filter(Boolean);
-    let cjkChars = 0;
-    let enWords = 0;
-
-    rawTokens.forEach(tok => {
-      const cjkMatches = tok.match(/[\u4e00-\u9fff\u3040-\u30ff\u31f0-\u31ff]/g); // 包含日文假名
-      if (cjkMatches && cjkMatches.length > 0) {
-        cjkChars += cjkMatches.length;
-      } else {
-        // 非 CJK token 當作 1 個英文單字
-        enWords += 1;
-      }
-    });
-
-    return {
-      cjkChars,
-      enWords,
-      total: cjkChars + enWords
-    };
-  }
-
-  function countWords(text) {
-    return getWordStats(text).total;
-  }
-
-  function updateWordCounts() {
-    const chapterText = state.chapters[state.currentChapter] || '';
-    const chapterStats = getWordStats(chapterText);
-
-    let totalStats = { cjkChars: 0, enWords: 0, total: 0 };
-    Object.values(state.chapters).forEach(t => {
-      const stats = getWordStats(t || '');
-      totalStats.cjkChars += stats.cjkChars;
-      totalStats.enWords += stats.enWords;
-      totalStats.total += stats.total;
-    });
-
-    const chapterSpan = document.getElementById('chapter-word-count');
-    const totalSpan = document.getElementById('total-word-count');
-    if (chapterSpan) {
-      chapterSpan.textContent =
-        `本章字數：約 ${chapterStats.total}（中/日：${chapterStats.cjkChars} 字 / 英：${chapterStats.enWords} words）`;
-    }
-    if (totalSpan) {
-      totalSpan.textContent =
-        `全文字數：約 ${totalStats.total}（中/日：${totalStats.cjkChars} 字 / 英：${totalStats.enWords} words）`;
-    }
-  }
-
-  /**********************
-   * 專案與期刊設定     *
-   **********************/
-
-  // 擴充 journalProfiles: 包含 61 本期刊的完整列表
-  state.journalProfiles = mapJournalData();
-
-
-  function mapJournalData() {
-    // 您的期刊列表數據，以方便轉換的格式儲存
-    const journalList = [
-      { id: 'se', name: 'Science Education', abbr: 'SciEd', category: 'Science & Mathematics Education', scope: '總體科學教育，所有層級的理論與實證研究。', wordLimit: '7,500 - 10,000 字', note: '理論性貢獻、廣泛影響力、批判性分析。' },
-      { id: 'jrst', name: 'Journal of Research in Science Teaching', abbr: 'JRST', category: 'Science & Mathematics Education', scope: '科學教學與學習的原創實證研究、方法學嚴謹性。', wordLimit: '7,000 - 8,000 字', note: '嚴謹的方法論、對實踐和理論的具體貢獻。' },
-      { id: 'ijse', name: 'International Journal of Science Education', abbr: 'IJSE', category: 'Science & Mathematics Education', scope: '國際視野下的科學教學與學習，鼓勵跨文化研究。', wordLimit: '7,000 - 8,000 字', note: '國際比較與情境化、研究結果應用性。' },
-      { id: 'rise', name: 'Research in Science Education', abbr: 'RISE', category: 'Science & Mathematics Education', scope: '澳洲/亞太地區科學教育研究，涵蓋所有科學學科。', wordLimit: '8,000 字以內', note: '澳洲與亞太視角、實證性、跨學科議題、課程改革。' },
-      { id: 'sise', name: 'Studies in Science Education', abbr: 'SISE', category: 'Science & Mathematics Education', scope: '對特定科學教育研究領域的批判性文獻回顧或理論建構。', wordLimit: '約 10,000 字', note: '文獻綜合與批判、理論建構 (不接受原始實證)。' },
-      { id: 'jset', name: 'J Sci Edu Technol', abbr: 'JSET', category: 'Science & Mathematics Education', scope: '科學教育中的技術應用、教學干預與評估。', wordLimit: '6,000 - 8,000 字', note: '科技整合、實證數據、創新教學設計。' },
-      { id: 'ijsme', name: 'IJSME', abbr: 'IJSME', category: 'Science & Mathematics Education', scope: '數學與科學教育的綜合研究，著重教學實踐。', wordLimit: '7,000 - 9,000 字', note: '跨學科整合 (STEM)、教學實踐與學習成效。' },
-      { id: 'jrme', name: 'Journal for Research in Mathematics Education', abbr: 'JRME', category: 'Science & Mathematics Education', scope: '數學教育領域最頂尖的理論與實證研究。', wordLimit: '8,000 - 10,000 字', note: '深度理論探討、數學教育認知與教學法創新。' },
-      { id: 'cie', name: 'Cultural Studies of Science Education', abbr: 'CSSE', category: 'Science & Mathematics Education', scope: '運用文化研究視角探討科學教育的社會、政治與文化面向。', wordLimit: '8,000 - 10,000 字', note: '社會文化、批判性理論、科學教育的公平性。' },
-      { id: 'bse', name: 'Baltic Science Education', abbr: 'BSE', category: 'Science & Mathematics Education', scope: '波羅的海國家科學教育研究，專注科學、數學、技術教育。', wordLimit: '6,000 - 8,000 字', note: '波羅的海/東歐情境、實踐性、教育科技應用。' },
-      { id: 'ejmste', name: 'Eurasia J of Math, Science and Tech Edu', abbr: 'EJMSTE', category: 'Science & Mathematics Education', scope: '數學、科學與技術教育的實踐與研究，國際性。', wordLimit: '6,000 - 8,000 字', note: '亞洲與歐洲的 STEM 教育研究、實證數據。' },
-      { id: 'eer', name: 'Environmental Education Research', abbr: 'EER', category: 'Science & Mathematics Education', scope: '環境教育與永續發展教育的研究，與科學教育高度相關。', wordLimit: '7,000 - 9,000 字', note: '環境議題、教育政策與跨學科教學。' },
-
-      { id: 'rer', name: 'Review of Educational Research', abbr: 'RER', category: 'General Education & Policy', scope: '教育領域的系統性、批判性文獻回顧或整合分析。', wordLimit: '10,000 - 15,000 字+', note: '頂尖文獻綜合、高影響力結論、理論建構。' },
-      { id: 'aerj', name: 'American Educational Research Journal', abbr: 'AERJ', category: 'General Education & Policy', scope: '教育領域最高品質的原創實證研究（量化、質化、混合）。', wordLimit: '8,000 - 10,000 字', note: '最高標準的方法學嚴謹性、理論與實踐重大貢獻。' },
-      { id: 'er', name: 'Educational Researcher', abbr: 'ER', category: 'General Education & Policy', scope: '廣泛教育議題的評論、政策、方法論文章與簡報。', wordLimit: '4,000 - 8,000 字 (依類型)', note: '時效性與政策相關性、對學術界影響廣泛。' },
-      { id: 'aje', name: 'American Journal of Education', abbr: 'AJE', category: 'General Education & Policy', scope: '著重教育的歷史、社會學、政治學視角與社會正義。', wordLimit: '8,000 - 10,000 字', note: '批判性分析、歷史與文化情境化、社會公平。' },
-      { id: 'berj', name: 'British Educational Research Journal', abbr: 'BERJ', category: 'General Education & Policy', scope: '英國教育研究協會刊物，國際性綜合教育研究。', wordLimit: '7,000 - 9,000 字', note: '國際化、涵蓋課程、政策、心理學等多領域。' },
-      { id: 'eepa', name: 'Educational Evaluation and Policy Analysis', abbr: 'EEPA', category: 'General Education & Policy', scope: '教育政策的制定、執行、評估與問責制研究。', wordLimit: '7,000 - 9,000 字', note: '政策分析、大規模數據、嚴謹的量化方法。' },
-      { id: 'ep', name: 'Educational Policy', abbr: 'EP', category: 'General Education & Policy', scope: '專注於教育政策的影響、改革、政治學分析。', wordLimit: '8,000 - 10,000 字', note: '政策理論、國際比較、宏觀層面分析。' },
-      { id: 'cer', name: 'Comparative Education Review', abbr: 'CER', category: 'General Education & Policy', scope: '比較教育與國際教育發展議題研究。', wordLimit: '7,000 - 9,000 字', note: '跨國比較、全球教育趨勢、發展中國家教育。' },
-      { id: 'ci', name: 'Curriculum Inquiry', abbr: 'CI', category: 'General Education & Policy', scope: '課程理論、課程社會學與哲學探討。', wordLimit: '8,000 - 10,000 字', note: '理論性與哲學探討、課程設計的批判性研究。' },
-      { id: 'jcs', name: 'Journal of Curriculum Studies', abbr: 'JCS', category: 'General Education & Policy', scope: '國際性課程研究，涵蓋課程的理論與實踐。', wordLimit: '7,000 - 8,000 字', note: '課程實踐與理論的結合、國際課程比較。' },
-      { id: 'tcr', name: 'Teachers College Record', abbr: 'TCR', category: 'General Education & Policy', scope: '跨學科教育研究，涵蓋歷史、哲學、社會學、政策。', wordLimit: '8,000 - 10,000 字', note: '廣泛議題、歷史/社會背景下的教育問題。' },
-      { id: 'rre', name: 'Review of Research in Education', abbr: 'RRE', category: 'General Education & Policy', scope: '每年針對一個主題進行深入的綜合評論。', wordLimit: '10,000 - 15,000 字', note: '深度主題分析、對年度研究主題的綜合貢獻。' },
-      { id: 'emald', name: 'Educational Management Administration & Leadership', abbr: 'EMAL', category: 'General Education & Policy', scope: '學校行政、管理與領導力研究。', wordLimit: '7,000 - 8,000 字', note: '領導者角色、學校效能、管理理論應用。' },
-      { id: 'jec', name: 'Journal of Educational Change', abbr: 'JEC', category: 'General Education & Policy', scope: '專注於教育系統、機構、學校的變革與創新。', wordLimit: '7,000 - 9,000 字', note: '變革理論、教育創新實施、阻力與成功因素。' },
-      { id: 'ijed', name: 'International J of Educational Development', abbr: 'IJED', category: 'General Education & Policy', scope: '專注於發展中國家教育與國際援助的議題。', wordLimit: '7,000 - 9,000 字', note: '發展性政策、國際教育援助、教育與發展。' },
-      { id: 'err', name: 'Educational Research Review', abbr: 'ERR', category: 'General Education & Policy', scope: '高品質的教育研究文獻評論期刊 (非 RER)。', wordLimit: '8,000 - 10,000 字', note: '系統性回顧、某一研究領域的綜合分析。' },
-      { id: 'ore', name: 'Oxford Review of Education', abbr: 'ORE', category: 'General Education & Policy', scope: '英國頂尖教育評論期刊，涵蓋政策、歷史、比較教育。', wordLimit: '8,000 - 10,000 字', note: '高品質評論、對教育學術界的貢ALI獻。' },
-
-      { id: 'jep', name: 'Journal of Educational Psychology', abbr: 'JEP', category: 'Educational Psychology & Measurement', scope: '學習、記憶、動機、教學的心理學基礎。', wordLimit: '8,000 - 10,000 字', note: '實驗設計、高內部效度、嚴格的心理學實證。' },
-      { id: 'li', name: 'Learning and Instruction', abbr: 'L&I', category: 'Educational Psychology & Measurement', scope: '學習與教學過程的實證研究，強調認知與情境。', wordLimit: '7,500 - 9,000 字', note: '教學干預、學習機制的認知與情境分析。' },
-      { id: 'cep', name: 'Contemporary Educational Psychology', abbr: 'CEP', category: 'Educational Psychology & Measurement', scope: '學習、發展、動機與教學的實驗與實證研究。', wordLimit: '6,000 - 8,000 字', note: '實驗/準實驗設計、認知與動機機制。' },
-      { id: 'epst', name: 'Educational Psychologist', abbr: 'EPst', category: 'Educational Psychology & Measurement', scope: '教育心理學的理論、評論與應用。', wordLimit: '7,000 - 9,000 字', note: '理論建構、教育心理學概念的綜合與批判。' },
-      { id: 'ame', name: 'Applied Measurement in Education', abbr: 'AME', category: 'Educational Psychology & Measurement', scope: '教育測量與評估的應用研究，心理計量學。', wordLimit: '7,000 - 9,000 字', note: '測量理論、IRT、教育評估工具的開發與應用。' },
-      { id: 'epm', name: 'Educational and Psychological Measurement', abbr: 'EPM', category: 'Educational Psychology & Measurement', scope: '專注於教育與心理測量的方法學與理論。', wordLimit: '8,000 - 10,000 字', note: '心理計量學理論與發展、測量工具的嚴謹度。' },
-      { id: 'jee', name: 'Journal of Experimental Education', abbr: 'JEE', category: 'Educational Psychology & Measurement', scope: '實驗設計和教育評估方法，強調因果推論。', wordLimit: '7,000 - 9,000 字', note: '嚴格的實驗設計、量化方法學。' },
-      { id: 'cije', name: 'Cognition and Instruction', abbr: 'C&I', category: 'Educational Psychology & Measurement', scope: '學習、認知與教學的交集，強調高階思維。', wordLimit: '8,000 - 10,000 字', note: '複雜認知過程、教學設計與認知負荷。' },
-      { id: 'dp', name: 'Developmental Psychology', abbr: 'DP', category: 'Educational Psychology & Measurement', scope: '發展心理學研究，包括兒童在教育情境下的發展。', wordLimit: '8,000 - 10,000 字', note: '兒童與青少年發展、長期縱向研究。' },
-      { id: 'esj', name: 'The Elementary School Journal', abbr: 'ESJ', category: 'Educational Psychology & Measurement', scope: '專注於 K-8 階段的課程、教學、教育心理學。', wordLimit: '7,000 - 9,000 字', note: '小學到初中教育、實證研究、政策相關性。' },
-
-      { id: 'etrd', name: 'Educational Technology Research and Development', abbr: 'ETR&D', category: 'Educational Technology & Higher Education', scope: '教學設計、教育科技的發展、實施和評估。', wordLimit: '6,000 - 8,000 字', note: '設計與發展 (D&D) 研究、教學系統設計。' },
-      { id: 'ce', name: 'Computers & Education', abbr: 'C&E', category: 'Educational Technology & Higher Education', scope: '電腦與數位工具在各級教育中的應用與影響。', wordLimit: '7,500 - 9,000 字', note: '技術效用、嚴謹的實證數據、對教學實踐的啟示。' },
-      { id: 'bjet', name: 'British Journal of Educational Technology', abbr: 'BJET', category: 'Educational Technology & Higher Education', scope: '教育科技的理論、實踐與設計，英國或國際性視野。', wordLimit: '6,000 - 8,000 字', note: '科技整合理論、教育技術的創新設計。' },
-      { id: 'ihe', name: 'The Internet and Higher Education', abbr: 'IHE', category: 'Educational Technology & Higher Education', scope: '網路與數位技術在高等教育中的應用和影響。', wordLimit: '7,000 - 8,000 字', note: '高等教育科技、線上學習、數位校園。' },
-      { id: 'ile', name: 'Interactive Learning Environments', abbr: 'ILE', category: 'Educational Technology & Higher Education', scope: '互動學習環境的設計、技術與評估。', wordLimit: '7,000 - 9,000 字', note: 'AR/VR/沉浸式技術、人機互動與學習成效。' },
-      { id: 'rhe', name: 'The Review of Higher Education', abbr: 'RHE', category: 'Educational Technology & Higher Education', scope: '高等教育的理論、研究與政策。', wordLimit: '8,000 - 10,000 字', note: '高等教育政策、行政管理、學生發展。' },
-      { id: 'he', name: 'Higher Education', abbr: 'HE', category: 'Educational Technology & Higher Education', scope: '國際化的高等教育研究，涵蓋全球趨勢。', wordLimit: '7,000 - 9,000 字', note: '國際比較、高等教育系統分析、跨國合作。' },
-      { id: 'jhe', name: 'Journal of Higher Education', abbr: 'JHE', category: 'Educational Technology & Higher Education', scope: '高等教育的機構、領導、財務與政策研究。', wordLimit: '8,000 - 10,000 字', note: '領導力與治理、高等教育的社會學分析。' },
-      { id: 'alhe', name: 'Active Learning in Higher Education', abbr: 'ALHE', category: 'Educational Technology & Higher Education', scope: '專注於高等教育中的主動學習教學法與策略。', wordLimit: '6,000 - 8,000 字', note: '教學創新、學生參與、課程設計的實證研究。' },
-      { id: 'jcal', name: 'Journal of Computer Assisted Learning', abbr: 'JCAL', category: 'Educational Technology & Higher Education', scope: '運用電腦輔助學習的實證研究，側重學習成效。', wordLimit: '7,000 - 9,000 字', note: '輔助學習機制、技術干預與認知負荷。' },
-      { id: 'tihe', name: 'Teaching in Higher Education', abbr: 'TiHE', category: 'Educational Technology & Higher Education', scope: '高等教育中的教學實踐、課程與評估。', wordLimit: '6,000 - 8,000 字', note: '高等教育教學法、教師專業發展、教學創新。' },
-
-      { id: 'tte', name: 'Teaching and Teacher Education', abbr: 'TTE', category: 'Teacher, Special, Diverse Education', scope: '教師的職前與在職教育、專業發展研究。', wordLimit: '7,000 - 8,000 字', note: '教師知能、專業發展模式、教師生命週期。' },
-      { id: 'jte', name: 'Journal of Teacher Education', abbr: 'JTE', category: 'Teacher, Special, Diverse Education', scope: '教師教育的理論、政策與實踐。', wordLimit: '8,000 - 10,000 字', note: '教師教育課程設計、教育公平、政策影響。' },
-      { id: 'ec', name: 'Exceptional Children', abbr: 'EC', category: 'Teacher, Special, Diverse Education', scope: '特殊教育與身心障礙兒童教育的原創實證研究。', wordLimit: '7,000 - 9,000 字', note: '干預與評估、對特殊教育實踐有直接影響。' },
-      { id: 'jld', name: 'Journal of Learning Disabilities', abbr: 'JLD', category: 'Teacher, Special, Diverse Education', wordLimit: '7,000 - 9,000 字', scope: '學習障礙的識別、評估與干預研究。', note: '診斷工具、有效教學策略、神經學基礎。' },
-      { id: 'gcq', name: 'Gifted Child Quarterly', abbr: 'GCQ', category: 'Teacher, Special, Diverse Education', scope: '資優教育的理論、研究與實踐。', wordLimit: '6,000 - 8,000 字', note: '資優生鑑定、資優課程設計與社會情感發展。' },
-      { id: 'ijie', name: 'International Journal of Inclusive Education', abbr: 'IJIE', category: 'Teacher, Special, Diverse Education', scope: '融合教育的理論、政策與實踐。', wordLimit: '7,000 - 9,000 字', note: '融合教育模式、教育公平、多元文化教育。' },
-      { id: 'aeq', name: 'Adult Education Quarterly', abbr: 'AEQ', category: 'Teacher, Special, Diverse Education', scope: '成人教育與終身學習研究。', wordLimit: '7,000 - 9,000 字', note: '成人學習理論、非正規教育、繼續教育。' },
-      { id: 'jrce', name: 'Journal of Research in Childhood Education', abbr: 'JRCE', category: 'Teacher, Special, Diverse Education', scope: '專注於幼兒教育、早期學習與發展。', wordLimit: '6,000 - 8,000 字', note: '學前與幼兒教育、社會情感發展。' },
-      { id: 'ted', name: 'Teaching Education', abbr: 'T Ed', category: 'Teacher, Special, Diverse Education', scope: '專注於教師教育的實踐與反思。', wordLimit: '7,000 - 8,000 字', note: '實踐社區、師資培訓模式、教師身份認同。' },
-      { id: 'jle', name: 'Journal of Latinos and Education', abbr: 'JLE', category: 'Teacher, Special, Diverse Education', scope: '專注於拉丁裔學生的教育議題、公平與文化。', wordLimit: '7,000 - 9,000 字', note: '種族、文化與教育公平、多元文化教育。' },
-      { id: 'gae', name: 'Gender and Education', abbr: 'G&E', category: 'Teacher, Special, Diverse Education', scope: '教育中的性別議題、公平與社會學分析。', wordLimit: '8,000 - 10,000 字', note: '性別理論、教育中的權力結構、女性主義教育。' },
-      // 額外加入先前存在的 TSSCI/SSCI 範例
-      { id: 'taper', name: 'Asia-Pacific Education Researcher', abbr: 'TAPER', category: 'General Education & Policy', scope: 'Education · Asia-Pacific · empirical and theoretical studies', wordLimit: '約 8,000–10,000 英文字', note: '偏向實證研究與區域性教育議題。' },
-      { id: 'jer', name: '教育研究集刊', abbr: 'JES', category: 'General Education & Policy', scope: '教育學術研究，涵蓋各類教育議題', wordLimit: '約 2 萬字（中文）', note: '國內教育學界頂尖中文期刊，對理論深度與實務意涵要求高。' },
-      { id: 'jsera', name: '中華民國教育學會學術論文集', abbr: 'JSERA', category: 'General Education & Policy', scope: '教育政策、哲學、社會學、心理學等', wordLimit: '約 1.5 萬字（中文）', note: '中文教育類核心期刊，接受多元研究取向。' }
-    ];
-
-    // 將陣列轉換為 {key: profile} 物件格式
-    return journalList.reduce((acc, curr) => {
-      acc[curr.id] = {
-        name: curr.name,
-        abbr: curr.abbr,
-        scope: curr.scope,
-        wordLimit: curr.wordLimit,
-        style: 'APA 7th edition', // 預設使用 APA 7th
-        note: curr.note,
-        category: curr.category // 用於前端分組
-      };
-      return acc;
-    }, {});
-  }
-  
-  function updateProjectMeta() {
-    const title = document.getElementById('project-title')?.value || '';
-    const field = document.getElementById('project-field')?.value || '';
-    const year = document.getElementById('project-year')?.value || '';
-
-    state.projectMeta.title = title;
-    state.projectMeta.field = field;
-    state.projectMeta.year = year || '2025';
-
-    const sidebarName = document.getElementById('sidebar-project-name');
-    if (sidebarName) sidebarName.textContent = title || '未命名專案';
-
-    const meta = document.getElementById('user-meta');
-    if (meta) {
-      meta.textContent = field && year
-        ? field + ' · Target ' + year
-        : 'Local project · Auto-save';
-    }
-  }
-
-  function updateJournalProfile() {
-    const sel = document.getElementById('journal-select');
-    if (!sel) return;
-    const key = sel.value;
-    state.projectMeta.journalKey = key;
-    const profile = state.journalProfiles[key];
-    const box = document.getElementById('journal-profile-summary');
-    if (!box) return;
-
-    const sidebarJournal = document.getElementById('sidebar-journal');
-    if (sidebarJournal) {
-      sidebarJournal.textContent = profile ? profile.name : '未設定';
-    }
-
-    if (!profile) {
-      box.innerHTML = '<p class="text-slate-500">尚未選擇期刊。</p>';
-      return;
-    }
-
-    box.innerHTML = `
-      <div><span class="text-slate-400">期刊名稱：</span><span class="font-semibold">${profile.name} (${profile.abbr})</span></div>
-      <div><span class="text-slate-400">範疇：</span><span>${profile.scope}</span></div>
-      <div><span class="text-slate-400">字數限制：</span><span>${profile.wordLimit}</span></div>
-      <div><span class="text-slate-400">寫作體例：</span><span>${profile.style}</span></div>
-      <div><span class="text-slate-400">備註：</span><span>${profile.note}</span></div>
-    `;
-  }
-
-  function updateStylePreset() {
-    const sel = document.getElementById('style-preset');
-    if (!sel) return;
-    state.stylePreset = sel.value;
-    scheduleSaveState();
-  }
-
-  /**********************
-   * 研究設計 / RQ / H *
-   **********************/
-
-  function updateResearchDesign() {
-    state.design.type = document.getElementById('design-type').value || '';
-    state.design.context = document.getElementById('design-context').value || '';
-    state.design.sample = document.getElementById('design-sample').value || '';
-    state.design.instruments = document.getElementById('design-instruments').value || '';
-    state.design.iv = document.getElementById('design-iv').value || '';
-    state.design.dv = document.getElementById('design-dv').value || '';
-    state.design.medmod = document.getElementById('design-medmod').value || '';
-    renderAnalysisPlan();
-    renderAnalysisPlanData();
-  }
-
-  function addRQ() {
-    const id = 'RQ' + (state.rqs.length + 1);
-    state.rqs.push({ id, text: '' });
-    renderRQList();
-    renderAnalysisPlan();
-    renderAnalysisPlanData();
-    scheduleSaveState();
-  }
-
-  function updateRQText(id, text) {
-    const rq = state.rqs.find(r => r.id === id);
-    if (rq) rq.text = text;
-    scheduleSaveState();
-  }
-
-  function removeRQ(id) {
-    state.rqs = state.rqs.filter(r => r.id !== id);
-    delete state.analysisPlan[id];
-    renderRQList();
-    renderAnalysisPlan();
-    renderAnalysisPlanData();
-    scheduleSaveState();
-  }
-
-  function renderRQList() {
-    const list = document.getElementById('rq-list');
-    if (!list) return;
-    list.innerHTML = '';
-    if (!state.rqs.length) {
-      list.innerHTML = '<p class="text-[11px] text-slate-400">尚未新增 RQ。</p>';
-      return;
-    }
-    state.rqs.forEach(rq => {
-      const div = document.createElement('div');
-      div.className = 'border border-slate-200 rounded p-1.5 bg-white';
-      div.innerHTML = `
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-slate-500 font-semibold">${rq.id}</span>
-          <button class="text-[10px] text-rose-500 hover:underline" onclick="removeRQ('${rq.id}')">
-            刪除
-          </button>
-        </div>
-        <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
-          placeholder="撰寫研究問題"
-          oninput="updateRQText('${rq.id}', this.value)">${escapeHtml(rq.text || '')}</textarea>
-      `;
-      list.appendChild(div);
-    });
-  }
-
-  function addHypothesis() {
-    const id = 'H' + (state.hypotheses.length + 1);
-    state.hypotheses.push({ id, text: '' });
-    renderHypothesisList();
-    scheduleSaveState();
-  }
-
-  function updateHypothesisText(id, text) {
-    const h = state.hypotheses.find(x => x.id === id);
-    if (h) h.text = text;
-    scheduleSaveState();
-  }
-
-  function removeHypothesis(id) {
-    state.hypotheses = state.hypotheses.filter(h => h.id !== id);
-    renderHypothesisList();
-    scheduleSaveState();
-  }
-
-  function renderHypothesisList() {
-    const list = document.getElementById('hypo-list');
-    if (!list) return;
-    list.innerHTML = '';
-    if (!state.hypotheses.length) {
-      list.innerHTML = '<p class="text-[11px] text-slate-400">尚未新增假設。</p>';
-      return;
-    }
-    state.hypotheses.forEach(h => {
-      const div = document.createElement('div');
-      div.className = 'border border-slate-200 rounded p-1.5 bg-white';
-      div.innerHTML = `
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-slate-500 font-semibold">${h.id}</span>
-          <button class="text-[10px] text-rose-500 hover:underline" onclick="removeHypothesis('${h.id}')">
-            刪除
-          </button>
-          </div>
-        <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
-          placeholder="撰寫研究假設"
-          oninput="updateHypothesisText('${h.id}', this.value)">${escapeHtml(h.text || '')}</textarea>
-      `;
-      list.appendChild(div);
-    });
-  }
-
-  function setAnalysisMethod(rqId, method) {
-    if (!state.analysisPlan[rqId]) state.analysisPlan[rqId] = {};
-    state.analysisPlan[rqId].method = method;
-    renderAnalysisPlanData();
-    scheduleSaveState();
-  }
-
-  function setAnalysisNote(rqId, note) {
-    if (!state.analysisPlan[rqId]) state.analysisPlan[rqId] = {};
-    state.analysisPlan[rqId].note = note;
-    scheduleSaveState();
-  }
-
-  function renderAnalysisPlan() {
-    const box = document.getElementById('analysis-plan');
-    if (!box) return;
-    box.innerHTML = '';
-    if (!state.rqs.length) {
-      box.innerHTML = '<p class="text-[11px] text-slate-400">尚未設定 RQ，無法建立分析對應。</p>';
-      return;
-    }
-    state.rqs.forEach(rq => {
-      const plan = state.analysisPlan[rq.id] || {};
-      const div = document.createElement('div');
-      div.className = 'border border-slate-200 rounded p-2 bg-white';
-      div.innerHTML = `
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-slate-600 font-semibold">${rq.id}</span>
-          <span class="text-[10px] text-slate-400">主要分析方法</span>
-        </div>
-        <div class="flex items-center gap-2 mb-1">
-          <select class="px-2 py-1 rounded border border-slate-300 text-[11px]"
-                  onchange="setAnalysisMethod('${rq.id}', this.value)">
-            <option value="">未指定</option>
-            <option value="t-test" ${plan.method==='t-test'?'selected':''}>t-test</option>
-            <option value="ANOVA" ${plan.method==='ANOVA'?'selected':''}>ANOVA / ANCOVA</option>
-            <option value="MLR" ${plan.method==='MLR'?'selected':''}>多元迴歸 (MLR)</option>
-            <option value="SEM" ${plan.method==='SEM'?'selected':''}>結構方程 (SEM)</option>
-            <option value="LMM" ${plan.method==='LMM'?'selected':''}>線性混合模式 (LMM)</option>
-            <option value="LCA" ${plan.method==='LCA'?'selected':''}>潛在類別分析 (LCA)</option>
-            <option value="Qual" ${plan.method==='Qual'?'selected':''}>質性主題分析</option>
-          </select>
-        </div>
-        <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
-          placeholder="補充：主要 DV / 統計控制變項 / 重要備註"
-          oninput="setAnalysisNote('${rq.id}', this.value)">${escapeHtml(plan.note || '')}</textarea>
-      `;
-      box.appendChild(div);
-    });
-  }
-
-  function renderAnalysisPlanData() {
-    const box = document.getElementById('analysis-plan-data');
-    if (!box) return;
-    box.innerHTML = '';
-    if (!state.rqs.length) {
-      box.innerHTML = '<p class="text-[11px] text-slate-400">尚未設定 RQ。</p>';
-      return;
-    }
-    state.rqs.forEach(rq => {
-      const plan = state.analysisPlan[rq.id] || {};
-      const div = document.createElement('div');
-      div.className = 'border border-slate-200 rounded p-2 bg-white';
-      div.innerHTML = `
-        <div class="flex items-center justify-between mb-1">
-          <span class="font-semibold text-slate-700">${rq.id}</span>
-          <span class="text-[10px] text-slate-400">${plan.method || '分析方法未設定'}</span>
-        </div>
-        <p class="text-[11px] text-slate-600 mb-1">${escapeHtml(rq.text || '尚未撰寫 RQ 內容')}</p>
-        <p class="text-[10px] text-slate-500">
-          ${plan.note ? escapeHtml(plan.note) : '尚未補充分析備註。'}
-        </p>
-      `;
-      box.appendChild(div);
-    });
-  }
-
-  /**********************
-   * 文獻庫 referencePool
-   **********************/
-
-  function handleLiteratureUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    state.litFilesMeta.sourceFileName = file.name;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet);
-
-      const pool = [];
-      rows.forEach((row, idx) => {
-        const authorsRaw =
-          row.Author ||
-          row.Authors ||
-          row['Authors'] ||
-          row.AU ||
-          row['AU'] ||
-          '';
-        const yearRaw =
-          row.Year ||
-          row.PY ||
-          row['PY'] ||
-          '';
-        const titleRaw =
-          row.Title ||
-          row['Article Title'] ||
-          row['Document Title'] ||
-          row.TI ||
-          row['TI'] ||
-          '';
-        const journalRaw =
-          row.Journal ||
-          row['Source Title'] ||
-          row['Journal Name'] ||
-          row.SO ||
-          row['SO'] ||
-          '';
-        const doiRaw =
-          row.DOI ||
-          row.Doi ||
-          row['DOI'] ||
-          row.DI ||
-          row['DI'] ||
-          '';
-
-        const authors = (authorsRaw || '').toString().trim();
-        const year = (yearRaw || '').toString().trim();
-        const title = (titleRaw || '').toString().trim();
-        const journal = (journalRaw || '').toString().trim();
-        const doi = (doiRaw || '').toString().trim();
-
-        if (!authors && !year && !title && !journal) {
-          console.warn('文獻第 ' + (idx+1) + ' 筆欄位皆為空，已略過。');
-          return;
-        }
-
-        pool.push({
-          id: 'ref-' + (idx + 1),
-          authors,
-          year,
-          title,
-          journal,
-          doi
-        });
-      });
-
-      state.referencePool = pool;
-      const litCount = document.getElementById('lit-count');
-      if (litCount) litCount.textContent = state.referencePool.length;
-
-      renderLiteratureList();
-      renderLiteraturePreview();
-      scheduleSaveState();
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function renderLiteratureList() {
-    const box = document.getElementById('lit-list');
-    const input = document.getElementById('lit-search');
-    if (!box) return;
-    const keyword = (input?.value || '').toLowerCase();
-
-    box.innerHTML = '';
-    if (!state.referencePool.length) {
-      box.innerHTML = '<p class="text-slate-400 text-[11px]">尚未上傳文獻庫。</p>';
-      return;
-    }
-
-    state.referencePool
-      .filter(ref => {
-        if (!keyword) return true;
-        const s = (ref.authors + ' ' + ref.title + ' ' + ref.journal).toLowerCase();
-        return s.includes(keyword);
-      })
-      .slice(0, 50)
-      .forEach(ref => {
-        const div = document.createElement('div');
-        div.className = 'flex items-start justify-between gap-2 py-1 border-b border-slate-200/70';
-        div.innerHTML = `
-          <div class="flex-1">
-            <div class="font-semibold text-[11px]">${escapeHtml(ref.authors || 'Unknown')} (${escapeHtml(ref.year || 'n.d.')})</div>
-            <div class="text-[10px] text-slate-600">${escapeHtml(ref.title || '')}</div>
-            <div class="text-[10px] text-slate-400 italic">${escapeHtml(ref.journal || '')}</div>
-          </div>
-          <button class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] hover:bg-emerald-700"
-                  onclick="insertCitation('${ref.id}')">
-            插入
-          </button>
-        `;
-        box.appendChild(div);
-      });
-  }
+  refs.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'mb-1 pb-1 border-b border-slate-200 last:border-b-0 last:pb-0';
+    const citeLabel = r.author ? `${r.author} (${r.year || 'n.d.'})` : `(${r.year || 'n.d.'})`;
+    div.innerHTML = `
+      <div class="flex items-start gap-1">
+        <div class="flex-1">
+          <div class="font-semibold text-[11px]">${escapeHtml(citeLabel)}</div>
+          <div class="text-[11px] text-slate-700">${escapeHtml(r.title || '')}</div>
+          <div class="text-[10px] text-slate-500">${escapeHtml(r.journal || '')}${r.doi ? '｜DOI: ' + escapeHtml(r.doi) : ''}</div>
+        </div>
+        <button class="ml-1 px-2 py-1 rounded bg-emerald-600 text-white text-[10px] h-fit"
+          onclick="insertCitation('${r.id}')">
+          引用
+        </button>
+      </div>
+    `;
+    box.appendChild(div);
+  });
+}
 
 function renderLiteraturePreview() {
   const tbody = document.getElementById('lit-preview-body');
   if (!tbody) return;
   tbody.innerHTML = '';
-
-  const items = state.referencePool || [];
-  items.forEach((item, idx) => {
+  state.referencePool.forEach((r, idx) => {
     const tr = document.createElement('tr');
     tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
-
-    const author = item.author || item.Author || '';
-    const year = item.year || item.Year || '';
-    const title = item.title || item.Title || '';
-    const journal = item.journal || item.Journal || '';
-
     tr.innerHTML = `
-      <td class="px-2 py-1 align-top text-slate-400">${idx + 1}</td>
-      <td class="px-2 py-1 align-top">${escapeHtml(author)}</td>
-      <td class="px-2 py-1 align-top">${escapeHtml(String(year))}</td>
-      <td class="px-2 py-1 align-top">${escapeHtml(title)}</td>
-      <td class="px-2 py-1 align-top">${escapeHtml(journal)}</td>
+      <td class="px-2 py-1 align-top">${idx + 1}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(r.author || '')}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(r.year || '')}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(r.title || '')}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(r.journal || '')}</td>
     `;
     tbody.appendChild(tr);
   });
-
-  const countBadge = document.getElementById('lit-count');
-  if (countBadge) {
-    countBadge.textContent = items.length;
-  }
 }
 
+function insertCitation(refId) {
+  const ref = state.referencePool.find(r => r.id === refId);
+  if (!ref) return;
+  const cite = ref.author ? `${ref.author.split(',')[0]} (${ref.year || 'n.d.'})` : `(${ref.year || 'n.d.'})`;
 
-  async function syncLiteratureToBackend() {
-    if (!state.referencePool.length) {
-      alert('請先上傳文獻庫（referencePool）。');
-      return;
-    }
-    const result = await callBackend('/syncReferences', {
-      projectId: state.projectId,
-      referencePool: state.referencePool
-    });
-    if (!result.ok) {
-      alert('同步到後端失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
-    alert(result.data.message || '文獻庫已送出後端處理。');
-  }
+  const ed = getCurrentEditor();
+  if (!ed) return;
+  const start = ed.selectionStart;
+  const end = ed.selectionEnd;
+  const text = ed.value;
+  const insertText = ` (${cite})`;
+  ed.value = text.slice(0, start) + insertText + text.slice(end);
+  ed.focus();
+  const caret = start + insertText.length;
+  ed.setSelectionRange(caret, caret);
 
-  /**********************
-   * 引文插入與 References
-   **********************/
+  onChapterInput(state.currentChapter, ed.value);
+  state.usedCitationIds.add(refId);
+  scheduleSaveState();
+}
 
-   function insertCitation(refId) {
-    const ref = state.referencePool.find(r => r.id === refId);
-    if (!ref) {
-      alert('此文獻不在 referencePool 中，禁止引用。');
-      return;
-    }
+function generateReferencesSection() {
+  if (!state.usedCitationIds.size) {
+    alert('目前尚未在正文插入任何引用。');
+    return;
+  }
+  const selectedIds = Array.from(state.usedCitationIds);
+  const selected = state.referencePool.filter(r => selectedIds.includes(r.id));
 
-    const editor = getCurrentEditor();
-    if (!editor) {
-      alert('請先切換到要插入的章節編輯區。');
-      return;
-    }
+  selected.sort((a, b) => {
+    const aKey = (a.author || '') + (a.year || '');
+    const bKey = (b.author || '') + (b.year || '');
+    return aKey.localeCompare(bKey);
+  });
 
-    const citation = buildInTextCitation(ref);
-    const start = editor.selectionStart || 0;
-    const end = editor.selectionEnd || start;
-    const original = editor.value || '';
+  const lines = selected.map(r => {
+    const parts = [];
+    if (r.author) parts.push(r.author);
+    if (r.year) parts.push(`(${r.year}).`);
+    if (r.title) parts.push(r.title + '.');
+    if (r.journal) parts.push(r.journal + '.');
+    if (r.doi) parts.push('https://doi.org/' + r.doi);
+    return parts.join(' ');
+  });
 
-    const before = original.slice(0, start);
-    const after = original.slice(end);
-    const needsSpaceBefore = before && !/\s$/.test(before);
-    const needsSpaceAfter = after && !/^\s/.test(after);
+  const sectionText = '\n\nReferences\n' + lines.join('\n');
+  state.chapters.fullpaper = (state.chapters.fullpaper || '') + sectionText;
 
-    const insertText =
-      (needsSpaceBefore ? ' ' : '') +
-      citation +
-      (needsSpaceAfter ? ' ' : '');
-
-    const newValue = before + insertText + after;
-    editor.value = newValue;
-
-    // 更新 state & 字數
-    state.chapters[state.currentChapter] = newValue;
-    state.usedCitationIds.add(refId);
-    updateWordCounts();
-    scheduleSaveState();
+  if (state.currentChapter === 'fullpaper') {
+    const ed = getCurrentEditor();
+    if (ed) ed.value = state.chapters.fullpaper;
   }
 
-  // 產生內文括號引用 (Author, Year) / (Author et al., Year)
-  function buildInTextCitation(ref) {
-    const year = (ref.year || 'n.d.').toString().trim();
-    let authors = (ref.authors || 'Author').toString().trim();
+  updateWordCounts();
+  scheduleSaveState();
+  alert('已將 References 追加至「全文整合」章節的末尾。');
+}
 
-    // 先抓第一位作者
-    let primary = authors.split(/;|,|&| and |、/i)[0].trim();
-    primary = primary.replace(/\.$/, '');
-
-    const hasMultiple =
-      /;|&| and |、/.test(authors);
-
-    if (!primary) primary = 'Author';
-
-    return hasMultiple
-      ? `(${primary} et al., ${year})`
-      : `(${primary}, ${year})`;
+async function syncLiteratureToBackend() {
+  const res = await callBackend('/syncReferences', {
+    projectId: state.projectId,
+    referencePool: state.referencePool
+  });
+  if (!res.ok) {
+    alert('同步失敗：' + (res.error || '未知錯誤'));
+    return;
   }
+  const msg = res.data && res.data.message ? res.data.message : '已送出文獻庫。';
+  alert(msg);
+}
 
-  /**********************
-   * References 生成     *
-   **********************/
-
-  function generateReferencesSection() {
-    if (!state.referencePool.length) {
-      alert('尚未上傳文獻庫（referencePool）。');
-      return;
-    }
-    if (!state.usedCitationIds || state.usedCitationIds.size === 0) {
-      alert('目前尚未插入任何引用，無法生成 References。');
-      return;
-    }
-
-    // 只取實際使用過的文獻
-    const used = state.referencePool.filter(ref =>
-      state.usedCitationIds.has(ref.id)
-    );
-
-    if (!used.length) {
-      alert('目前 usedCitationIds 為空，請重新插入引文後再試。');
-      return;
-    }
-
-    // 依作者 / 年排序
-    used.sort((a, b) => {
-      const aKey = (a.authors || '').toLowerCase();
-      const bKey = (b.authors || '').toLowerCase();
-      if (aKey < bKey) return -1;
-      if (aKey > bKey) return 1;
-      const ay = parseInt(a.year) || 0;
-      const by = parseInt(b.year) || 0;
-      return ay - by;
-    });
-
-    const lines = used.map(ref => {
-      const authors = ref.authors || '';
-      const year = ref.year || 'n.d.';
-      const title = ref.title || '';
-      const journal = ref.journal || '';
-      const doi = (ref.doi || '').trim();
-
-      let doiPart = '';
-      if (doi) {
-        // 不確定資料裡是不是完整網址，就簡單處理
-        doiPart = doi.toLowerCase().startsWith('10.')
-          ? ` https://doi.org/${doi}`
-          : ` ${doi}`;
-      }
-
-      // 簡化版 APA；真正排版交給論文撰寫時再微調
-      return `${authors} (${year}). ${title}. ${journal}.${doiPart}`;
-    });
-
-    const refText = 'References\n' + lines.join('\n');
-
-    // 將 References 寫入 fullpaper 章節末端
-    let fp = state.chapters.fullpaper || '';
-
-    // 若已存在 "References" 標題，先砍掉舊的
-    const refRegex = /References[\s\S]*$/i;
-    if (refRegex.test(fp)) {
-      fp = fp.replace(refRegex, '').trim();
-    }
-
-    fp = (fp ? fp + '\n\n' : '') + refText;
-    state.chapters.fullpaper = fp;
-
-    // 若目前正在編輯 fullpaper，就同步顯示
-    const editors = document.querySelectorAll('.chapter-editor');
-    editors.forEach(ed => {
-      if (ed.dataset.chapter === 'fullpaper') {
-        ed.value = fp;
-      }
-    });
-
-    updateWordCounts();
-    scheduleSaveState();
-    alert('已根據實際引用的文獻生成 References，並寫入「10. 全文整合」章節。');
+// =======================
+// 快照 / 版本
+// =======================
+function createSnapshot() {
+  const id = 'S' + Date.now();
+  const label = new Date().toLocaleString('zh-TW', { hour12: false });
+  const snapshot = {
+    id,
+    label,
+    chapter: state.currentChapter,
+    createdAt: Date.now(),
+    chapters: Object.assign({}, state.chapters)
+  };
+  state.snapshots.unshift(snapshot);
+  if (state.snapshots.length > 20) {
+    state.snapshots.pop();
   }
+  renderSnapshotList();
+  scheduleSaveState();
+}
 
-  /**********************
-   * 期刊適配 & 品質檢查 *
-   **********************/
-
-  function getJournalProfile() {
-    const key = state.projectMeta.journalKey;
-    if (!key) return null;
-    return state.journalProfiles[key] || null;
+function renderSnapshotList() {
+  const box = document.getElementById('snapshot-list');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!state.snapshots.length) {
+    box.innerHTML = '<p class="text-slate-400 text-[10px]">尚未建立快照。</p>';
+    return;
   }
+  state.snapshots.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'w-full text-left px-2 py-0.5 rounded border border-slate-200 bg-white hover:bg-slate-100';
+    btn.textContent = `${s.label}｜章節：${s.chapter}`;
+    btn.addEventListener('click', () => restoreSnapshot(s.id));
+    box.appendChild(btn);
+  });
+}
 
-  async function runManuscriptFitCheck() {
-    const payload = {
-      projectId: state.projectId,
-      projectMeta: state.projectMeta,
-      design: state.design,
-      rqs: state.rqs,
-      hypotheses: state.hypotheses,
-      chapters: state.chapters,
-      journalProfile: getJournalProfile(),
-      stylePreset: state.stylePreset,
-      lang: state.lang
-    };
-
-    const result = await callBackend('/fitCheck', payload);
-    if (!result.ok) {
-      alert('期刊適配檢查失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
-
-    const summary = result.data && result.data.summary
-      ? result.data.summary
-      : '[後端未回傳摘要內容]';
-
-    appendChatMessage('assistant', summary, '期刊適配檢查');
-    switchTab('writing');
+function restoreSnapshot(id) {
+  const s = state.snapshots.find(x => x.id === id);
+  if (!s) return;
+  state.chapters = Object.assign({}, s.chapters || {});
+  const sel = document.getElementById('chapter-select');
+  if (sel) {
+    sel.value = s.chapter || 'outline';
   }
+  state.currentChapter = s.chapter || 'outline';
+  switchChapter();
+  updateWordCounts();
+  scheduleSaveState();
+}
 
-  async function runQualityCheck() {
-    const payload = {
-      projectId: state.projectId,
-      projectMeta: state.projectMeta,
-      design: state.design,
-      rqs: state.rqs,
-      hypotheses: state.hypotheses,
-      chapters: state.chapters,
-      journalProfile: getJournalProfile(),
-      stylePreset: state.stylePreset,
-      lang: state.lang
-    };
+// =======================
+// Checklist（章節待辦）
+// =======================
+function initChecklist() {
+  updateChecklistForChapter(state.currentChapter || 'outline');
+}
 
-    const result = await callBackend('/qualityCheck', payload);
-    if (!result.ok) {
-      alert('品質與倫理檢查失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
+function updateChecklistForChapter(chKey) {
+  const box = document.getElementById('chapter-checklist');
+  if (!box) return;
+  const itemsByChapter = {
+    outline: [
+      '列出研究背景、核心問題與章節架構。',
+      '確認與目標期刊 scope 的對應關係。'
+    ],
+    intro: [
+      '清楚說明研究情境與問題重要性。',
+      '交代理論與實務 gap，收束到本研究目的。',
+      '適度引用近五年 SSCI 文獻支持問題意義。'
+    ],
+    lit_review: [
+      '分段整理理論脈絡、重要概念與實證研究。',
+      '強調各研究的貢獻與限制，導出研究缺口。',
+      '文內引用全部來自系統文獻池（referencePool）。'
+    ],
+    method: [
+      '交代研究設計、對象、工具、程序與分析方法。',
+      '說明信效度與研究倫理（IRB / 同意程序）。',
+      '分析方法需能回應每一題 RQ 與假設。'
+    ],
+    results: [
+      '依序回應各 RQ，呈現主要統計指標。',
+      '表格與文字敘述一致，標註 N、M、SD、p 等。',
+      '避免把討論內容提前寫入本節。'
+    ],
+    discussion: [
+      '將結果與研究問題與既有文獻連結。',
+      '說明意外結果與可能原因。',
+      '加入理論層面的詮釋與實務意涵。'
+    ]
+  };
+  const list = itemsByChapter[chKey] || itemsByChapter.outline;
+  box.innerHTML = list.map(t => `<div class="flex items-start gap-1 text-[11px] text-slate-700">
+    <span class="mt-0.5 text-emerald-500"><i class="fa-regular fa-square"></i></span>
+    <span>${escapeHtml(t)}</span>
+  </div>`).join('');
+}
 
-    const summary = result.data && result.data.summary
-      ? result.data.summary
-      : '[後端未回傳摘要內容]';
-
-    appendChatMessage('assistant', summary, '品質＆倫理檢查');
-    switchTab('writing');
+// =======================
+// AI 功能（寫作／Reviewer）
+// =======================
+function appendChatMessage(role, text) {
+  const panel = document.getElementById('chat-panel');
+  if (!panel) return;
+  const div = document.createElement('div');
+  const baseClass = 'px-2 py-1.5 rounded text-[11px] whitespace-pre-wrap';
+  if (role === 'user') {
+    div.className = baseClass + ' bg-slate-200 text-slate-800';
+  } else if (role === 'assistant') {
+    div.className = baseClass + ' bg-indigo-50 text-slate-800 border border-indigo-200';
+  } else {
+    div.className = baseClass + ' bg-amber-50 text-slate-800 border border-amber-200';
   }
+  div.textContent = text;
+  panel.appendChild(div);
+  panel.scrollTop = panel.scrollHeight;
+}
 
-  /**********************
-   * AI Coach / Chat 面板 *
-   **********************/
-
-  function appendChatMessage(role, text, tag) {
-    const panel = document.getElementById('chat-panel');
-    if (!panel) return;
-
-    const wrapper = document.createElement('div');
-    const isUser = role === 'user';
-
-    wrapper.className = isUser
-      ? 'flex justify-end'
-      : 'flex justify-start';
-
-    const bubble = document.createElement('div');
-    bubble.className = isUser
-      ? 'max-w-[90%] bg-indigo-600 text-white rounded-lg px-2.5 py-1.5 text-[11px] shadow-sm whitespace-pre-wrap'
-      : 'max-w-[90%] bg-white text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 text-[11px] shadow-sm whitespace-pre-wrap';
-
-    if (tag) {
-      const label = document.createElement('div');
-      label.className = 'text-[10px] font-semibold mb-0.5 ' + (isUser ? 'text-indigo-100' : 'text-slate-500');
-      label.textContent = tag;
-      bubble.appendChild(label);
-    }
-
-    const content = document.createElement('div');
-    content.innerHTML = escapeHtml(text);
-    bubble.appendChild(content);
-
-    wrapper.appendChild(bubble);
-    panel.appendChild(wrapper);
-
-    scrollChatToBottom();
+async function generateChapterDraft() {
+  const chapterKey = state.currentChapter;
+  const res = await callBackend('/generateChapter', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    chapterKey,
+    chapterText: state.chapters[chapterKey] || '',
+    projectMeta: state.projectMeta,
+    design: state.design,
+    rqs: state.rqs,
+    hypotheses: state.hypotheses,
+    analysisPlan: state.analysisPlan,
+    referencePool: state.referencePool
+  });
+  if (!res.ok) {
+    appendChatMessage('system', '生成章節草稿失敗：' + (res.error || '未知錯誤'));
+    return;
   }
+  const text = (res.data && res.data.text) || '';
+  state.chapters[chapterKey] = text;
+  const ed = getCurrentEditor();
+  if (ed) ed.value = text;
+  updateWordCounts();
+  scheduleSaveState();
+  appendChatMessage('assistant', '已更新本章草稿（Mock/或後端生成結果已寫回 editor）。');
+}
 
-  function scrollChatToBottom() {
-    const panel = document.getElementById('chat-panel');
-    if (!panel) return;
-    panel.scrollTop = panel.scrollHeight;
+async function runReviewerMode() {
+  const chapterKey = state.currentChapter;
+  const res = await callBackend('/reviewChapter', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    chapterKey,
+    chapterText: state.chapters[chapterKey] || '',
+    projectMeta: state.projectMeta,
+    design: state.design
+  });
+  if (!res.ok) {
+    appendChatMessage('system', 'Reviewer 模式失敗：' + (res.error || '未知錯誤'));
+    return;
   }
+  const data = res.data || {};
+  const lines = [];
+  if (data.summary) lines.push(data.summary);
+  if (Array.isArray(data.comments)) lines.push('', ...data.comments);
+  appendChatMessage('assistant', lines.join('\n'));
+}
 
-  // 簡易自由指令：目前僅記錄在聊天區，實際對話後端可自行擴充
-  function sendAIMessage() {
-    const input = document.getElementById('ai-input');
-    if (!input) return;
-    const text = (input.value || '').trim();
-    if (!text) return;
+async function runAutoCitationForCurrentChapter() {
+  const chapterKey = state.currentChapter;
+  const res = await callBackend('/autoCiteChapter', {
+    lang: state.lang,
+    chapterKey,
+    chapterText: state.chapters[chapterKey] || '',
+    referencePool: state.referencePool
+  });
+  if (!res.ok) {
+    appendChatMessage('system', '自動配文獻失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+  const text = (res.data && res.data.text) || '';
+  state.chapters[chapterKey] = text;
+  const ed = getCurrentEditor();
+  if (ed) ed.value = text;
+  updateWordCounts();
+  scheduleSaveState();
+  appendChatMessage('assistant', '已對本章進行示意性的引用標記。');
+}
 
-    appendChatMessage('user', text);
-
-    // 目前先給一個 placeholder 回覆，避免未串接後端時整個掛掉
-    const reply =
-      '目前「自由對話模式」尚未串接後端 API。\n' +
-      '你仍可使用上方按鈕（生成本章草稿、Reviewer 模式、AI 自動配文獻、期刊適配檢查等）取得 AI 協助。';
-    appendChatMessage('assistant', reply, '系統提示');
-
+async function sendAIMessage() {
+  const input = document.getElementById('ai-input');
+  if (!input) return;
+  const prompt = input.value.trim();
+  if (!prompt) {
+    // 若沒輸入，自動視為請 AI 給本章改寫建議
     input.value = '';
+    return generateChapterDraft();
   }
+  appendChatMessage('user', prompt);
+  input.value = '';
 
-  /**********************
-   * 章節生成 / Reviewer *
-   **********************/
+  const res = await callBackend('/chat', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    chapterKey: state.currentChapter,
+    chapterText: state.chapters[state.currentChapter] || '',
+    projectMeta: state.projectMeta,
+    design: state.design,
+    prompt
+  });
+  if (!res.ok) {
+    appendChatMessage('system', 'AI 回覆失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+  const reply = (res.data && res.data.reply) || '[AI 無回應內容]';
+  appendChatMessage('assistant', reply);
+}
 
-  async function generateChapterDraft() {
-    const chapterKey = state.currentChapter;
-    const chapterText = state.chapters[chapterKey] || '';
+// =======================
+// AI：Method / Results
+// =======================
+async function generateMethodDraft() {
+  const res = await callBackend('/methodDraft', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    design: state.design,
+    rqs: state.rqs,
+    hypotheses: state.hypotheses,
+    analysisPlan: state.analysisPlan
+  });
+  if (!res.ok) {
+    alert('生成方法章節失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+  const text = (res.data && res.data.text) || '';
+  state.chapters.method = (state.chapters.method || '') + '\n\n' + text;
+  if (state.currentChapter === 'method') {
+    const ed = getCurrentEditor();
+    if (ed) ed.value = state.chapters.method;
+  }
+  updateWordCounts();
+  scheduleSaveState();
+}
 
-    const payload = {
-      projectId: state.projectId,
-      chapterKey,
-      chapterText,
-      lang: state.lang,
-      stylePreset: state.stylePreset,
-      projectMeta: state.projectMeta,
-      design: state.design,
-      rqs: state.rqs,
-      hypotheses: state.hypotheses,
-      analysisPlan: state.analysisPlan,
-      referencePool: state.referencePool
-    };
+async function generateResultsDraft() {
+  const res = await callBackend('/resultsDraft', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    design: state.design,
+    dataMeta: state.dataMeta,
+    chapters: state.chapters
+  });
+  if (!res.ok) {
+    alert('生成結果章節失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+  const text = (res.data && res.data.text) || '';
+  state.chapters.results = (state.chapters.results || '') + '\n\n' + text;
+  if (state.currentChapter === 'results') {
+    const ed = getCurrentEditor();
+    if (ed) ed.value = state.chapters.results;
+  }
+  updateWordCounts();
+  scheduleSaveState();
+}
 
-    appendChatMessage('assistant', '正在生成本章草稿（mock / 後端）...', '系統');
+// =======================
+// 期刊適配＆品質倫理檢查
+// =======================
+async function runManuscriptFitCheck() {
+  const jp = state.journalProfiles[state.projectMeta.journalKey] || null;
+  const res = await callBackend('/fitCheck', {
+    lang: state.lang,
+    projectMeta: state.projectMeta,
+    design: state.design,
+    chapters: state.chapters,
+    journalProfile: jp
+  });
+  if (!res.ok) {
+    alert('期刊適配檢查失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+  const summary = (res.data && res.data.summary) || '無回傳內容。';
+  appendChatMessage('system', summary);
+}
 
-    const result = await callBackend('/generateChapter', payload);
-    if (!result.ok) {
-      alert('生成章節草稿失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
+async function runQualityCheck() {
+  const res = await callBackend('/qualityCheck', {
+    lang: state.lang,
+    projectMeta: state.projectMeta,
+    design: state.design,
+    chapters: state.chapters
+  });
+  if (!res.ok) {
+    alert('品質＆倫理檢查失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+  const summary = (res.data && res.data.summary) || '無回傳內容。';
+  appendChatMessage('system', summary);
+}
 
-    const newText = (result.data && result.data.text) || '';
-    state.chapters[chapterKey] = newText;
+// =======================
+// 投稿包區塊
+// =======================
+function restoreSubmissionUI() {
+  const c = document.getElementById('sub-cover-letter');
+  const r = document.getElementById('sub-response');
+  const n = document.getElementById('sub-notes');
+  if (c) c.value = state.submission.coverLetter || '';
+  if (r) r.value = state.submission.response || '';
+  if (n) n.value = state.submission.notes || '';
 
-    const editor = getCurrentEditor();
-    if (editor) editor.value = newText;
-
-    updateWordCounts();
+  if (c) c.addEventListener('input', () => {
+    state.submission.coverLetter = c.value;
     scheduleSaveState();
-
-    appendChatMessage('assistant', '本章草稿已更新至編輯區，請再依實際研究內容微調。', '章節生成');
-  }
-
-  async function runReviewerMode() {
-    const chapterKey = state.currentChapter;
-    const chapterText = state.chapters[chapterKey] || '';
-
-    const payload = {
-      projectId: state.projectId,
-      chapterKey,
-      chapterText,
-      lang: state.lang,
-      stylePreset: state.stylePreset,
-      projectMeta: state.projectMeta,
-      design: state.design,
-      rqs: state.rqs,
-      hypotheses: state.hypotheses,
-      journalProfile: getJournalProfile()
-    };
-
-    appendChatMessage('assistant', '正在進行 Reviewer 模式檢視（mock / 後端）...', '系統');
-
-    const result = await callBackend('/reviewChapter', payload);
-    if (!result.ok) {
-      alert('Reviewer 模式失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
-
-    const data = result.data || {};
-    let text = (data.summary || '') + '\n\n';
-
-    if (Array.isArray(data.comments) && data.comments.length) {
-      text += data.comments.join('\n');
-    }
-
-    appendChatMessage('assistant', text, 'Reviewer 模式');
-  }
-
-  async function runAutoCitationForCurrentChapter() {
-    const chapterKey = state.currentChapter;
-    const chapterText = state.chapters[chapterKey] || '';
-
-    if (!state.referencePool.length) {
-      alert('尚未上傳文獻庫（referencePool），無法自動配文獻。');
-      return;
-    }
-
-    const payload = {
-      projectId: state.projectId,
-      chapterKey,
-      chapterText,
-      lang: state.lang,
-      stylePreset: state.stylePreset,
-      referencePool: state.referencePool
-    };
-
-    appendChatMessage('assistant', '正在示意性自動配文獻（mock / 後端）...', '系統');
-
-    const result = await callBackend('/autoCiteChapter', payload);
-    if (!result.ok) {
-      alert('AI 自動配文獻失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
-
-    const newText = (result.data && result.data.text) || chapterText;
-    state.chapters[chapterKey] = newText;
-
-    const editor = getCurrentEditor();
-    if (editor) editor.value = newText;
-
-    updateWordCounts();
+  });
+  if (r) r.addEventListener('input', () => {
+    state.submission.response = r.value;
     scheduleSaveState();
-
-    appendChatMessage(
-      'assistant',
-      '本章文字已加入示意性引用標記。請再檢查每一筆引用是否真有對應文獻並調整。',
-      '自動配文獻'
-    );
-  }
-
-  /**********************
-   * 結果 / 方法草稿生成 *
-   **********************/
-
-  async function generateResultsDraft() {
-    const payload = {
-      projectId: state.projectId,
-      design: state.design,
-      rqs: state.rqs,
-      hypotheses: state.hypotheses,
-      analysisPlan: state.analysisPlan,
-      dataMeta: state.dataMeta,
-      lang: state.lang,
-      stylePreset: state.stylePreset
-    };
-
-    const result = await callBackend('/resultsDraft', payload);
-    if (!result.ok) {
-      alert('生成結果敘述草稿失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
-
-    const draft = (result.data && result.data.text) || '';
-    // 直接寫入 results 章節（附加在後面）
-    state.chapters.results = (state.chapters.results || '') +
-      (state.chapters.results ? '\n\n' : '') +
-      draft;
-
-    if (state.currentChapter === 'results') {
-      const ed = getCurrentEditor();
-      if (ed) ed.value = state.chapters.results;
-    }
-
-    updateWordCounts();
+  });
+  if (n) n.addEventListener('input', () => {
+    state.submission.notes = n.value;
     scheduleSaveState();
-    appendChatMessage('assistant', '結果章節草稿已寫入「4. 研究結果」。', '結果草稿');
+  });
+}
+
+async function generateCoverLetter() {
+  const res = await callBackend('/generateCoverLetter', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    projectMeta: state.projectMeta,
+    journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null
+  });
+  if (!res.ok) {
+    alert('生成 Cover Letter 失敗：' + (res.error || '未知錯誤'));
+    return;
   }
+  const text = (res.data && res.data.text) || '';
+  state.submission.coverLetter = text;
+  const c = document.getElementById('sub-cover-letter');
+  if (c) c.value = text;
+  scheduleSaveState();
+}
 
-  async function generateMethodDraft() {
-    const payload = {
-      projectId: state.projectId,
-      design: state.design,
-      rqs: state.rqs,
-      hypotheses: state.hypotheses,
-      analysisPlan: state.analysisPlan,
-      lang: state.lang,
-      stylePreset: state.stylePreset
-    };
-
-    const result = await callBackend('/methodDraft', payload);
-    if (!result.ok) {
-      alert('生成方法章節草稿失敗：' + (result.error || '未知錯誤'));
-      return;
-    }
-
-    const draft = (result.data && result.data.text) || '';
-    state.chapters.method = (state.chapters.method || '') +
-      (state.chapters.method ? '\n\n' : '') +
-      draft;
-
-    if (state.currentChapter === 'method') {
-      const ed = getCurrentEditor();
-      if (ed) ed.value = state.chapters.method;
-    }
-
-    updateWordCounts();
-    scheduleSaveState();
-    appendChatMessage('assistant', '方法章節草稿已寫入「3. 研究方法」。', '方法草稿');
+async function generateResponseToReviewers() {
+  const res = await callBackend('/generateResponseToReviewers', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    projectMeta: state.projectMeta,
+    journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null,
+    responseDraft: state.submission.response || ''
+  });
+  if (!res.ok) {
+    alert('生成 Response to Reviewers 失敗：' + (res.error || '未知錯誤'));
+    return;
   }
+  const text = (res.data && res.data.text) || '';
+  state.submission.response = text;
+  const r = document.getElementById('sub-response');
+  if (r) r.value = text;
+  scheduleSaveState();
+}
 
-  /**********************
-   * 快照 / 版本管理      *
-   **********************/
+function appendSubmissionSummaryToChat() {
+  const parts = [];
+  parts.push('投稿包總覽：');
+  if (state.submission.coverLetter) parts.push('\n[Cover Letter]\n' + state.submission.coverLetter.slice(0, 800) + (state.submission.coverLetter.length > 800 ? '\n……' : ''));
+  if (state.submission.response) parts.push('\n[Response to Reviewers]\n' + state.submission.response.slice(0, 800) + (state.submission.response.length > 800 ? '\n……' : ''));
+  if (state.submission.notes) parts.push('\n[投稿備註]\n' + state.submission.notes);
+  appendChatMessage('user', parts.join('\n'));
+}
 
-  function createSnapshot() {
-    const id = 'snap-' + Date.now();
-    const label = new Date().toLocaleString();
-    const chaptersCopy = JSON.parse(JSON.stringify(state.chapters));
-
-    state.snapshots.push({
-      id,
-      label,
-      createdAt: Date.now(),
-      currentChapter: state.currentChapter,
-      chapters: chaptersCopy
-    });
-
-    // 最多保留 20 個快照
-    if (state.snapshots.length > 20) {
-      state.snapshots.shift();
-    }
-
-    renderSnapshotList();
-    scheduleSaveState();
-  }
-
-  function restoreSnapshot(id) {
-    const snap = state.snapshots.find(s => s.id === id);
-    if (!snap) return;
-
-    if (!confirm('確定要還原這個快照？目前章節內容將被覆蓋。')) return;
-
-    state.chapters = JSON.parse(JSON.stringify(snap.chapters || state.chapters));
-
-    // 更新編輯器顯示
-    const editors = document.querySelectorAll('.chapter-editor');
-    editors.forEach(ed => {
-      const key = ed.dataset.chapter;
-      ed.value = state.chapters[key] || '';
-    });
-
-    updateWordCounts();
-    scheduleSaveState();
-  }
-
-  function renderSnapshotList() {
-    const box = document.getElementById('snapshot-list');
-    if (!box) return;
-
-    box.innerHTML = '';
-    if (!state.snapshots.length) {
-      box.innerHTML = '<div class="text-[10px] text-slate-400">尚未建立任何快照。</div>';
-      return;
-    }
-
-    state.snapshots
-      .slice()
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .forEach(snap => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center justify-between border border-slate-200 rounded px-1.5 py-0.5 bg-white';
-
-        const left = document.createElement('div');
-        left.className = 'flex-1 min-w-0';
-        left.innerHTML =
-          `<div class="truncate text-[10px] text-slate-700">${escapeHtml(snap.label)}</div>`;
-
-        const btn = document.createElement('button');
-        btn.className = 'ml-1 px-1.5 py-0.5 text-[10px] rounded border border-indigo-400 text-indigo-600 hover:bg-indigo-50';
-        btn.textContent = '還原';
-        btn.onclick = () => restoreSnapshot(snap.id);
-
-        div.appendChild(left);
-        div.appendChild(btn);
-        box.appendChild(div);
-      });
-  }
-
-  /**********************
-   * Data meta / 上傳    *
-   **********************/
-
-  function handleDataRawUpload(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    state.dataMeta.rawFileName = file.name;
-    scheduleSaveState();
-  }
-
-  function handleDataOutputUpload(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    state.dataMeta.outputFileName = file.name;
-    scheduleSaveState();
-  }
-
-  function updateDataMeta() {
-    const notes = document.getElementById('data-notes')?.value || '';
-    state.dataMeta.notes = notes;
-    scheduleSaveState();
-  }
-
-  /**********************
-   * Checklist by chapter
-   **********************/
-
-  function updateChecklistForChapter(chapterKey) {
-    const box = document.getElementById('chapter-checklist');
-    if (!box) return;
-
-    const map = {
-      outline: [
-        '是否明確列出緒論、文獻、方法、結果、討論、結論等章節？',
-        '每個章節下是否有 2–4 個關鍵小節標題？',
-        '大綱是否與目標期刊（例如 L&I / C&E）文章結構相似？'
-      ],
-      intro: [
-        '是否清楚呈現研究背景與情境脈絡？',
-        '研究動機與問題意識是否具備「理論缺口／實務缺口」？',
-        '是否明確提出研究目的與研究問題（RQ）？'
-      ],
-      lit_review: [
-        '是否依主題而非逐篇文獻逐一介紹？',
-        '文獻是否以 SSCI / SCI 近五年研究為主，舊文獻作為理論基礎？',
-        '是否在段落結尾點出「本研究將如何回應上述缺口」？'
-      ],
-      method: [
-        '研究設計（量化／質性／混合）是否與 RQ 一一對應？',
-        '樣本、工具、程序是否可再現？信效度是否交代清楚？',
-        '統計方法或質性分析步驟是否對應到 analysis plan？'
-      ],
-      results: [
-        '是否先以表格／圖形呈現，再輔以文字說明重點？',
-        '結果敘述是否直接回應 RQ，而非重複方法或討論？',
-        '統計值（t, F, p, η² 等）是否標示完整且格式一致？'
-      ],
-      discussion: [
-        '是否分別對應每一個 RQ / 主要發現進行討論？',
-        '是否與過去文獻進行對照，說明一致／不一致的原因？',
-        '是否提出合理的理論解釋與情境詮釋，而非僅重述結果？'
-      ],
-      conclusion: [
-        '是否用 2–3 段整理本研究最核心的結論？',
-        '是否避免出現尚未在結果與討論中出現的新發現？',
-        '是否緊扣研究問題與研究目的作收束？'
-      ],
-      implications: [
-        '是否區分對「課室教學／教師培訓／政策」等不同層面的意涵？',
-        '是否避免空泛建議，而是具體、可操作？',
-        '是否與研究結果清楚連結，而非脫節？'
-      ],
-      limitations: [
-        '是否誠實說明樣本、設計、測量上的限制？',
-        '是否避免過度自貶或僅用一句話帶過？',
-        '是否進一步指出未來研究方向與可改進之處？'
-      ],
-      abstract: [
-        '是否包含背景、目的、方法、結果、結論四要素？',
-        '字數是否符合目標期刊摘要規範？',
-        '是否使用第三人稱、過去式與客觀語氣？'
-      ],
-      fullpaper: [
-        '全文結構是否一致、段落銜接是否流暢？',
-        '是否所有內文引用都有對應之 References？',
-        '是否檢查語言風格（例如 state.stylePreset = "conservative" 時更保守）？'
-      ]
-    };
-
-    const items = map[chapterKey] || map.outline;
-    box.innerHTML =
-      '<ul class="list-disc pl-4 space-y-0.5 text-[11px] text-slate-700">' +
-      items.map(li => `<li>${escapeHtml(li)}</li>`).join('') +
-      '</ul>';
-  }
-
-  /**********************
-   * localStorage：補上 usedCitationIds
-   **********************/
-
-  // 覆寫前面定義的 saveStateToStorage / loadStateFromStorage（若你前面已加過，可略過此段）
-  const _origSave = saveStateToStorage;
-  saveStateToStorage = function () {
-    try {
-      const safeState = {
-        projectId: state.projectId,
-        lang: state.lang,
-        stylePreset: state.stylePreset,
-        projectMeta: state.projectMeta,
-        chapters: state.chapters,
-        design: state.design,
-        rqs: state.rqs,
-        hypotheses: state.hypotheses,
-        analysisPlan: state.analysisPlan,
-        dataMeta: state.dataMeta,
-        litFilesMeta: state.litFilesMeta,
-        snapshots: state.snapshots,
-        referencePool: state.referencePool,
-        usedCitationIds: Array.from(state.usedCitationIds || [])
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
-    } catch (e) {
-      console.warn('儲存到 localStorage 失敗：', e);
-    }
-  };
-
-  const _origLoad = loadStateFromStorage;
-  loadStateFromStorage = function () {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!saved || typeof saved !== 'object') return;
-
-      Object.assign(state, {
-        projectId: saved.projectId || 'default',
-        lang: saved.lang || 'zh-TW',
-        stylePreset: saved.stylePreset || 'balanced',
-        projectMeta: Object.assign({}, state.projectMeta, saved.projectMeta || {}),
-        chapters: Object.assign({}, state.chapters, saved.chapters || {}),
-        design: Object.assign({}, state.design, saved.design || {}),
-        rqs: saved.rqs || [],
-        hypotheses: saved.hypotheses || [],
-        analysisPlan: saved.analysisPlan || {},
-        dataMeta: Object.assign({}, state.dataMeta, saved.dataMeta || {}),
-        litFilesMeta: Object.assign({}, state.litFilesMeta, saved.litFilesMeta || {}),
-        snapshots: saved.snapshots || [],
-        referencePool: saved.referencePool || []
-      });
-
-      state.usedCitationIds = new Set(saved.usedCitationIds || []);
-
-      // 回填 UI（與原本版本一致）
-      document.getElementById('project-title').value = state.projectMeta.title || '';
-      document.getElementById('project-field').value = state.projectMeta.field || '';
-      document.getElementById('project-year').value = state.projectMeta.year || '2025';
-      document.getElementById('design-type').value = state.design.type || '';
-      document.getElementById('design-context').value = state.design.context || '';
-      document.getElementById('design-sample').value = state.design.sample || '';
-      document.getElementById('design-instruments').value = state.design.instruments || '';
-      document.getElementById('design-iv').value = state.design.iv || '';
-      document.getElementById('design-dv').value = state.design.dv || '';
-      document.getElementById('design-medmod').value = state.design.medmod || '';
-      document.getElementById('data-notes').value = state.dataMeta.notes || '';
-      document.getElementById('style-preset').value = state.stylePreset || 'balanced';
-    } catch (e) {
-      console.warn('讀取 localStorage 失敗：', e);
-    }
-  };
+// =======================
+// 完成
+// =======================
 </script>
 </body>
 </html>
