@@ -339,7 +339,7 @@
         <!-- Preview -->
         <div class="glass rounded-xl border border-slate-200 p-4 text-xs">
           <h2 class="font-semibold text-slate-800 text-sm mb-2 flex items-center gap-2">
-            <i class="fa-solid fa-database text-slate-500"></i> 文獻庫預覽（前 20 筆）
+            <i class="fa-solid fa-database text-slate-500"></i> 文獻庫預覽
           </h2>
           <div class="max-h-60 overflow-y-auto scroll-thin border border-slate-200 rounded bg-white">
             <table class="w-full text-[11px]">
@@ -694,89 +694,218 @@
    * 多語系 UI 字典與切換 *
    **********************/
 
-  // 主 UI 的語系字典
-  const UI_I18N = {
-    'zh-TW': {
-      langLabel: '生成語言',
-      nav: {
-        project: '1. 專案＆期刊',
-        design: '2. 研究設計',
-        literature: '3. 文獻＆引用',
-        data: '4. 數據＆分析',
-        writing: '5. 寫作＆Reviewer',
-        submission: '6. 投稿包'
-      }
+ // 主 UI 的語系字典（側欄 nav + 專案卡片 + 期刊卡片）
+const UI_I18N = {
+  'zh-TW': {
+    langLabel: '生成語言',
+    nav: {
+      project: '1. 專案＆期刊',
+      design: '2. 研究設計',
+      literature: '3. 文獻＆引用',
+      data: '4. 數據＆分析',
+      writing: '5. 寫作＆Reviewer',
+      submission: '6. 投稿包'
     },
-    'zh-CN': {
-      langLabel: '生成语言',
-      nav: {
-        project: '1. 项目与期刊',
-        design: '2. 研究设计',
-        literature: '3. 文献与引用',
-        data: '4. 数据与分析',
-        writing: '5. 写作与审稿人',
-        submission: '6. 投稿包'
-      }
+    projectPanel: {
+      cardTitle: '專案基本資訊',
+      projectNameLabel: '專案名稱',
+      projectNamePlaceholder: '例如：Generative AI in PBL',
+      domainLabel: '領域',
+      domainPlaceholder: '例如：Science education / AI in education',
+      yearLabel: '預定投稿年份'
     },
-    'en': {
-      langLabel: 'Generation language',
-      nav: {
-        project: '1. Project & Journal',
-        design: '2. Research design',
-        literature: '3. Literature & citations',
-        data: '4. Data & analysis',
-        writing: '5. Writing & reviewer',
-        submission: '6. Submission package'
-      }
-    },
-    'ja': {
-      langLabel: '生成言語',
-      nav: {
-        project: '1. プロジェクトとジャーナル',
-        design: '2. 研究デザイン',
-        literature: '3. 文献と引用',
-        data: '4. データと分析',
-        writing: '5. 執筆と査読者',
-        submission: '6. 投稿パッケージ'
-      }
-    },
-    // 越南語：UI 文字也完整切換
-    'vi': {
-      langLabel: 'Ngôn ngữ sinh văn',
-      nav: {
-        project: '1. Dự án & tạp chí',
-        design: '2. Thiết kế nghiên cứu',
-        literature: '3. Tài liệu & trích dẫn',
-        data: '4. Dữ liệu & phân tích',
-        writing: '5. Viết bài & phản biện',
-        submission: '6. Gói gửi bài'
-      }
-    },
-    // 印尼語
-    'id': {
-      langLabel: 'Bahasa keluaran',
-      nav: {
-        project: '1. Proyek & jurnal',
-        design: '2. Desain penelitian',
-        literature: '3. Literatur & sitasi',
-        data: '4. Data & analisis',
-        writing: '5. Penulisan & reviewer',
-        submission: '6. Paket submit'
-      }
-    },
-    // 泰語
-    'th': {
-      langLabel: 'ภาษาที่ใช้สร้าง',
-      nav: {
-        project: '1. โปรเจกต์และวารสาร',
-        design: '2. การออกแบบวิจัย',
-        literature: '3. เอกสารและการอ้างอิง',
-        data: '4. ข้อมูลและการวิเคราะห์',
-        writing: '5. การเขียนและผู้ประเมิน',
-        submission: '6. ชุดส่งบทความ'
-      }
+    journalPanel: {
+      cardTitle: '目標期刊設定',
+      targetJournalLabel: '目標期刊',
+      targetJournalHint: '可在程式中擴充 journalProfiles 物件，加入常用期刊。',
+      metaNameLabel: '期刊名稱：',
+      metaScopeLabel: '範疇：',
+      metaWordLimitLabel: '字數限制：',
+      metaStyleLabel: '寫作體例：',
+      metaNoteLabel: '備註：'
     }
-  };
+  },
+
+  'zh-CN': {
+    langLabel: '生成语言',
+    nav: {
+      project: '1. 项目与期刊',
+      design: '2. 研究设计',
+      literature: '3. 文献与引用',
+      data: '4. 数据与分析',
+      writing: '5. 写作与审稿人',
+      submission: '6. 投稿包'
+    },
+    projectPanel: {
+      cardTitle: '项目基本信息',
+      projectNameLabel: '项目名称',
+      projectNamePlaceholder: '例如：Generative AI in PBL',
+      domainLabel: '领域',
+      domainPlaceholder: '例如：科学教育 / AI 教育',
+      yearLabel: '预计投稿年份'
+    },
+    journalPanel: {
+      cardTitle: '目标期刊设置',
+      targetJournalLabel: '目标期刊',
+      targetJournalHint: '可以在代码中的 journalProfiles 对象里加入常用期刊。',
+      metaNameLabel: '期刊名称：',
+      metaScopeLabel: '范围：',
+      metaWordLimitLabel: '字数限制：',
+      metaStyleLabel: '写作体例：',
+      metaNoteLabel: '备注：'
+    }
+  },
+
+  'en': {
+    langLabel: 'Generation language',
+    nav: {
+      project: '1. Project & Journal',
+      design: '2. Research design',
+      literature: '3. Literature & citations',
+      data: '4. Data & analysis',
+      writing: '5. Writing & reviewer',
+      submission: '6. Submission package'
+    },
+    projectPanel: {
+      cardTitle: 'Project basic information',
+      projectNameLabel: 'Project title',
+      projectNamePlaceholder: 'e.g., Generative AI in PBL',
+      domainLabel: 'Field',
+      domainPlaceholder: 'e.g., Science education / AI in education',
+      yearLabel: 'Planned submission year'
+    },
+    journalPanel: {
+      cardTitle: 'Target journal settings',
+      targetJournalLabel: 'Target journal',
+      targetJournalHint: 'You can define frequently used journals in the journalProfiles object.',
+      metaNameLabel: 'Journal title:',
+      metaScopeLabel: 'Scope:',
+      metaWordLimitLabel: 'Word limit:',
+      metaStyleLabel: 'Writing style:',
+      metaNoteLabel: 'Notes:'
+    }
+  },
+
+  'ja': {
+    langLabel: '生成言語',
+    nav: {
+      project: '1. プロジェクトとジャーナル',
+      design: '2. 研究デザイン',
+      literature: '3. 文献と引用',
+      data: '4. データと分析',
+      writing: '5. 執筆と査読者',
+      submission: '6. 投稿パッケージ'
+    },
+    projectPanel: {
+      cardTitle: 'プロジェクトの基本情報',
+      projectNameLabel: 'プロジェクト名',
+      projectNamePlaceholder: '例：Generative AI in PBL',
+      domainLabel: '分野',
+      domainPlaceholder: '例：理科教育／AI in education',
+      yearLabel: '投稿予定年'
+    },
+    journalPanel: {
+      cardTitle: 'ターゲットジャーナルの設定',
+      targetJournalLabel: 'ターゲットジャーナル',
+      targetJournalHint: 'よく使うジャーナルはコード内の journalProfiles オブジェクトに定義できます。',
+      metaNameLabel: 'ジャーナル名：',
+      metaScopeLabel: '範囲：',
+      metaWordLimitLabel: '語数：',
+      metaStyleLabel: '執筆スタイル：',
+      metaNoteLabel: '備考：'
+    }
+  },
+
+  'vi': {
+    langLabel: 'Ngôn ngữ sinh văn',
+    nav: {
+      project: '1. Dự án & tạp chí',
+      design: '2. Thiết kế nghiên cứu',
+      literature: '3. Tài liệu & trích dẫn',
+      data: '4. Dữ liệu & phân tích',
+      writing: '5. Viết bài & phản biện',
+      submission: '6. Gói gửi bài'
+    },
+    projectPanel: {
+      cardTitle: 'Thông tin cơ bản của đề án',
+      projectNameLabel: 'Tên đề án',
+      projectNamePlaceholder: 'Ví dụ: Generative AI in PBL',
+      domainLabel: 'Lĩnh vực',
+      domainPlaceholder: 'Ví dụ: Giáo dục khoa học / AI trong giáo dục',
+      yearLabel: 'Năm dự kiến nộp bài'
+    },
+    journalPanel: {
+      cardTitle: 'Thiết lập tạp chí mục tiêu',
+      targetJournalLabel: 'Tạp chí mục tiêu',
+      targetJournalHint: 'Có thể khai báo các tạp chí thường dùng trong đối tượng journalProfiles trong mã.',
+      metaNameLabel: 'Tên tạp chí:',
+      metaScopeLabel: 'Phạm vi:',
+      metaWordLimitLabel: 'Giới hạn số từ:',
+      metaStyleLabel: 'Chuẩn trình bày:',
+      metaNoteLabel: 'Ghi chú:'
+    }
+  },
+
+  'id': {
+    langLabel: 'Bahasa keluaran',
+    nav: {
+      project: '1. Proyek & jurnal',
+      design: '2. Desain penelitian',
+      literature: '3. Literatur & sitasi',
+      data: '4. Data & analisis',
+      writing: '5. Penulisan & reviewer',
+      submission: '6. Paket submit'
+    },
+    projectPanel: {
+      cardTitle: 'Informasi dasar proyek',
+      projectNameLabel: 'Judul proyek',
+      projectNamePlaceholder: 'Mis.: Generative AI in PBL',
+      domainLabel: 'Bidang',
+      domainPlaceholder: 'Mis.: Pendidikan sains / AI dalam pendidikan',
+      yearLabel: 'Tahun rencana submit'
+    },
+    journalPanel: {
+      cardTitle: 'Pengaturan jurnal target',
+      targetJournalLabel: 'Jurnal target',
+      targetJournalHint: 'Jurnal yang sering dipakai dapat didefinisikan di objek journalProfiles pada kode.',
+      metaNameLabel: 'Nama jurnal:',
+      metaScopeLabel: 'Cakupan:',
+      metaWordLimitLabel: 'Batas jumlah kata:',
+      metaStyleLabel: 'Gaya penulisan:',
+      metaNoteLabel: 'Catatan:'
+    }
+  },
+
+  'th': {
+    langLabel: 'ภาษาที่ใช้สร้าง',
+    nav: {
+      project: '1. โปรเจกต์และวารสาร',
+      design: '2. การออกแบบวิจัย',
+      literature: '3. เอกสารและการอ้างอิง',
+      data: '4. ข้อมูลและการวิเคราะห์',
+      writing: '5. การเขียนและผู้ประเมิน',
+      submission: '6. ชุดส่งบทความ'
+    },
+    projectPanel: {
+      cardTitle: 'ข้อมูลพื้นฐานของโครงการวิจัย',
+      projectNameLabel: 'ชื่อโครงการ',
+      projectNamePlaceholder: 'เช่น Generative AI in PBL',
+      domainLabel: 'สาขา',
+      domainPlaceholder: 'เช่น Science education / AI in education',
+      yearLabel: 'ปีที่คาดว่าจะส่งตีพิมพ์'
+    },
+    journalPanel: {
+      cardTitle: 'การตั้งค่าวารสารเป้าหมาย',
+      targetJournalLabel: 'วารสารเป้าหมาย',
+      targetJournalHint: 'สามารถเพิ่มวารสารที่ใช้บ่อยในออบเจ็กต์ journalProfiles ภายในโค้ดได้',
+      metaNameLabel: 'ชื่อวารสาร:',
+      metaScopeLabel: 'ขอบเขต:',
+      metaWordLimitLabel: 'จำนวนคำที่กำหนด:',
+      metaStyleLabel: 'รูปแบบการเขียน:',
+      metaNoteLabel: 'หมายเหตุ:'
+    }
+  }
+};
 
   // 每個分頁上方主標題與副標題的語系字典
   const TAB_I18N = {
@@ -965,41 +1094,97 @@
   };
 
   // 套用語系到主要 UI（側欄 nav、header 標題等等）
-  function applyLanguage(lang) {
-    const langCode = lang || state.lang || 'zh-TW';
-    const uiPack = UI_I18N[langCode] || UI_I18N['zh-TW'];
+// 依語系套用到 UI
+function applyLanguage(lang) {
+  const langCode = lang || state.lang || 'zh-TW';
+  const uiPack = UI_I18N[langCode] || UI_I18N['zh-TW'];
 
-    // <html lang="...">
-    if (document.documentElement) {
-      document.documentElement.lang = langCode;
-    }
-
-    // Header：生成語言 label
-    const langLabel = document.getElementById('lang-label');
-    if (langLabel && uiPack.langLabel) {
-      langLabel.textContent = uiPack.langLabel;
-    }
-
-    // 側欄 nav 文字
-    if (uiPack.nav) {
-      const navProject = document.querySelector('.nav-btn[data-tab="project"] span');
-      const navDesign = document.querySelector('.nav-btn[data-tab="design"] span');
-      const navLiterature = document.querySelector('.nav-btn[data-tab="literature"] span');
-      const navData = document.querySelector('.nav-btn[data-tab="data"] span');
-      const navWriting = document.querySelector('.nav-btn[data-tab="writing"] span');
-      const navSubmission = document.querySelector('.nav-btn[data-tab="submission"] span');
-
-      if (navProject && uiPack.nav.project) navProject.textContent = uiPack.nav.project;
-      if (navDesign && uiPack.nav.design) navDesign.textContent = uiPack.nav.design;
-      if (navLiterature && uiPack.nav.literature) navLiterature.textContent = uiPack.nav.literature;
-      if (navData && uiPack.nav.data) navData.textContent = uiPack.nav.data;
-      if (navWriting && uiPack.nav.writing) navWriting.textContent = uiPack.nav.writing;
-      if (navSubmission && uiPack.nav.submission) navSubmission.textContent = uiPack.nav.submission;
-    }
-
-    // 目前 tab 的主標題、副標題交給 switchTab() 依 TAB_I18N 控制
-    // 這裡不直接改 main-title / main-subtitle，避免和 switchTab 邏輯打架
+  // <html lang="...">
+  if (document.documentElement) {
+    document.documentElement.lang = langCode;
   }
+
+  // Header：生成語言 label
+  const langLabel = document.getElementById('lang-label');
+  if (langLabel && uiPack.langLabel) {
+    langLabel.textContent = uiPack.langLabel;
+  }
+
+  // 側欄 nav 文字
+  if (uiPack.nav) {
+    const navProject = document.querySelector('.nav-btn[data-tab="project"] span');
+    const navDesign = document.querySelector('.nav-btn[data-tab="design"] span');
+    const navLiterature = document.querySelector('.nav-btn[data-tab="literature"] span');
+    const navData = document.querySelector('.nav-btn[data-tab="data"] span');
+    const navWriting = document.querySelector('.nav-btn[data-tab="writing"] span');
+    const navSubmission = document.querySelector('.nav-btn[data-tab="submission"] span');
+
+    if (navProject && uiPack.nav.project) navProject.textContent = uiPack.nav.project;
+    if (navDesign && uiPack.nav.design) navDesign.textContent = uiPack.nav.design;
+    if (navLiterature && uiPack.nav.literature) navLiterature.textContent = uiPack.nav.literature;
+    if (navData && uiPack.nav.data) navData.textContent = uiPack.nav.data;
+    if (navWriting && uiPack.nav.writing) navWriting.textContent = uiPack.nav.writing;
+    if (navSubmission && uiPack.nav.submission) navSubmission.textContent = uiPack.nav.submission;
+  }
+
+  // 專案卡片標題 & 標籤
+  if (uiPack.projectPanel) {
+    const projectCardTitle = document.querySelector('#tab-project .glass:nth-child(1) h2');
+    if (projectCardTitle && uiPack.projectPanel.cardTitle) {
+      const icon = projectCardTitle.querySelector('i');
+      projectCardTitle.innerHTML = '';
+      if (icon) projectCardTitle.appendChild(icon);
+      projectCardTitle.appendChild(document.createTextNode(' ' + uiPack.projectPanel.cardTitle));
+    }
+
+    const projLabels = document.querySelectorAll('#tab-project .glass:nth-child(1) label');
+    if (projLabels.length >= 3) {
+      if (uiPack.projectPanel.projectNameLabel) projLabels[0].textContent = uiPack.projectPanel.projectNameLabel;
+      if (uiPack.projectPanel.domainLabel) projLabels[1].textContent = uiPack.projectPanel.domainLabel;
+      if (uiPack.projectPanel.yearLabel) projLabels[2].textContent = uiPack.projectPanel.yearLabel;
+    }
+
+    const projTitleInput = document.getElementById('project-title');
+    const projFieldInput = document.getElementById('project-field');
+    if (projTitleInput && uiPack.projectPanel.projectNamePlaceholder) {
+      projTitleInput.placeholder = uiPack.projectPanel.projectNamePlaceholder;
+    }
+    if (projFieldInput && uiPack.projectPanel.domainPlaceholder) {
+      projFieldInput.placeholder = uiPack.projectPanel.domainPlaceholder;
+    }
+  }
+
+  // 期刊卡片標題 & 標籤
+  if (uiPack.journalPanel) {
+    const journalCardTitle = document.querySelector('#tab-project .glass:nth-child(2) h2');
+    if (journalCardTitle && uiPack.journalPanel.cardTitle) {
+      const icon = journalCardTitle.querySelector('i');
+      journalCardTitle.innerHTML = '';
+      if (icon) journalCardTitle.appendChild(icon);
+      journalCardTitle.appendChild(document.createTextNode(' ' + uiPack.journalPanel.cardTitle));
+    }
+
+    const journalLabels = document.querySelectorAll('#tab-project .glass:nth-child(2) label');
+    if (journalLabels.length >= 1 && uiPack.journalPanel.targetJournalLabel) {
+      journalLabels[0].textContent = uiPack.journalPanel.targetJournalLabel;
+    }
+
+    const journalHint = document.querySelector('#tab-project .glass:nth-child(2) p.text-[11px]');
+    if (journalHint && uiPack.journalPanel.targetJournalHint) {
+      journalHint.textContent = uiPack.journalPanel.targetJournalHint;
+    }
+
+    // journal-profile-summary 裡的 meta label
+    const metaBox = document.getElementById('journal-profile-summary');
+    if (metaBox) {
+      // 這裡不重構 HTML，只在 updateJournalProfile() 內用 i18n label 會比較乾淨
+      // 所以這裡先不直接動 meta 文字
+    }
+  }
+
+  // main-title / main-subtitle 由 switchTab 依 TAB_I18N 控制
+}
+
 
   /**********************
    * 全域狀態：v3       *
@@ -1850,23 +2035,37 @@
       });
   }
 
-  function renderLiteraturePreview() {
-    const body = document.getElementById('lit-preview-body');
-    if (!body) return;
-    body.innerHTML = '';
-    state.referencePool.slice(0, 20).forEach((ref, idx) => {
-      const tr = document.createElement('tr');
-      tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60';
-      tr.innerHTML = `
-        <td class="px-2 py-1">${idx + 1}</td>
-        <td class="px-2 py-1">${escapeHtml(ref.authors || '')}</td>
-        <td class="px-2 py-1">${escapeHtml(ref.year || '')}</td>
-        <td class="px-2 py-1">${escapeHtml(ref.title || '')}</td>
-        <td class="px-2 py-1">${escapeHtml(ref.journal || '')}</td>
-      `;
-      body.appendChild(tr);
-    });
-  }
+function renderLiteraturePreview() {
+  const tbody = document.getElementById('lit-preview-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const items = state.referencePool || [];
+  items.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+
+    const author = item.author || item.Author || '';
+    const year = item.year || item.Year || '';
+    const title = item.title || item.Title || '';
+    const journal = item.journal || item.Journal || '';
+
+    tr.innerHTML = `
+      <td class="px-2 py-1 align-top text-slate-400">${idx + 1}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(author)}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(String(year))}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(title)}</td>
+      <td class="px-2 py-1 align-top">${escapeHtml(journal)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const countBadge = document.getElementById('lit-count');
+  if (countBadge) {
+    countBadge.textContent = items.length;
+  }
+}
+
 
   async function syncLiteratureToBackend() {
     if (!state.referencePool.length) {
