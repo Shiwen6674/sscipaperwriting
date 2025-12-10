@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>ScholarCraft v2 | AI 輔助 SSCI 論文寫作系統</title>
+  <title>ScholarCraft v3 | AI 輔助 SSCI 論文寫作系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -19,9 +19,6 @@
     .scroll-thin::-webkit-scrollbar { width: 6px; }
     .scroll-thin::-webkit-scrollbar-thumb { background:#cbd5e1;border-radius:3px; }
     .scroll-thin::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
-    .prose-area p { margin-bottom: 0.75rem; line-height: 1.8; text-align: justify; }
-    .prose-area h2 { margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.1rem; font-weight: 700; }
-    .prose-area h3 { margin-top: 1.25rem; margin-bottom: 0.5rem; font-size: 1rem; font-weight: 600; color:#4338ca;}
   </style>
 </head>
 <body class="bg-slate-100 h-screen flex overflow-hidden">
@@ -32,7 +29,7 @@
     <div>
       <div class="flex items-center gap-2">
         <i class="fa-solid fa-graduation-cap text-indigo-400"></i>
-        <span class="font-semibold tracking-wide">ScholarCraft v2</span>
+        <span class="font-semibold tracking-wide">ScholarCraft v3</span>
       </div>
       <p class="text-xs text-slate-400 mt-1">SSCI Q1 Writing Workstation</p>
     </div>
@@ -122,12 +119,11 @@
               onclick="runQualityCheck()">
         <i class="fa-solid fa-shield-heart mr-1"></i>品質＆倫理檢查
       </button>
-      <!-- 多語選單：新增區塊 -->
+      <!-- 多語選單：生成語言 -->
       <div class="flex items-center gap-1">
-        <span id="lang-label" class="text-slate-400">語言</span>
+        <span id="lang-label" class="text-slate-400">生成語言</span>
         <select id="lang-select"
                 class="px-2 py-1 rounded-full border border-slate-300 text-slate-600 bg-white focus:outline-none">
-          <!-- 選項由 JS 動態填入 -->
         </select>
       </div>
     </div>
@@ -149,20 +145,20 @@
               <input id="project-title" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs"
                      placeholder="例如：Generative AI in PBL for SSI Argumentation"
-                     oninput="updateProjectMeta()">
+                     oninput="updateProjectMeta(); scheduleSaveState();">
             </div>
             <div>
               <label class="block text-slate-500 mb-1">領域</label>
               <input id="project-field" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs"
                      placeholder="Science education / AI in education"
-                     oninput="updateProjectMeta()">
+                     oninput="updateProjectMeta(); scheduleSaveState();">
             </div>
             <div>
               <label class="block text-slate-500 mb-1">預定投稿年份</label>
               <input id="project-year" type="number"
                      class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs"
-                     value="2025" oninput="updateProjectMeta()">
+                     value="2025" oninput="updateProjectMeta(); scheduleSaveState();">
             </div>
           </div>
         </div>
@@ -176,7 +172,7 @@
               <label class="block text-slate-500 mb-1">目標期刊</label>
               <select id="journal-select"
                       class="w-full px-2 py-1.5 rounded border border-slate-300 text-xs"
-                      onchange="updateJournalProfile()">
+                      onchange="updateJournalProfile(); scheduleSaveState();">
               </select>
               <p class="text-[11px] text-slate-400 mt-1">
                 可在程式中擴充 journalProfiles 物件，加入常用期刊。
@@ -199,7 +195,7 @@
             <div>
               <label class="block text-slate-500 mb-1">研究類型</label>
               <select id="design-type" class="w-full px-2 py-1.5 rounded border border-slate-300"
-                      onchange="updateResearchDesign()">
+                      onchange="updateResearchDesign(); scheduleSaveState();">
                 <option value="">請選擇</option>
                 <option value="quant">量化實證</option>
                 <option value="qual">質性研究</option>
@@ -212,21 +208,21 @@
               <input id="design-context" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300"
                      placeholder="例如：台灣國中理化課室"
-                     oninput="updateResearchDesign()">
+                     oninput="updateResearchDesign(); scheduleSaveState();">
             </div>
             <div>
               <label class="block text-slate-500 mb-1">樣本概況（N、年級）</label>
               <input id="design-sample" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300"
                      placeholder="例如：兩校共 200 名國二學生"
-                     oninput="updateResearchDesign()">
+                     oninput="updateResearchDesign(); scheduleSaveState();">
             </div>
             <div>
               <label class="block text-slate-500 mb-1">研究工具 / 量表</label>
               <input id="design-instruments" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300"
                      placeholder="例如：論證能力量表、AI 使用問卷"
-                     oninput="updateResearchDesign()">
+                     oninput="updateResearchDesign(); scheduleSaveState();">
             </div>
           </div>
         </div>
@@ -246,11 +242,11 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
               <h3 class="font-semibold text-slate-700 text-xs mb-1">Research Questions</h3>
-              <div id="rq-list" class="space-y-1"></div>
+              <div id="rq-list" class="space-y-2"></div>
             </div>
             <div>
               <h3 class="font-semibold text-slate-700 text-xs mb-1">Hypotheses</h3>
-              <div id="hypo-list" class="space-y-1"></div>
+              <div id="hypo-list" class="space-y-2"></div>
             </div>
           </div>
         </div>
@@ -270,20 +266,20 @@
               <label class="block text-slate-500 mb-1">自變項 (IV)</label>
               <input id="design-iv" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300"
-                     oninput="updateResearchDesign()">
+                     oninput="updateResearchDesign(); scheduleSaveState();">
             </div>
             <div>
               <label class="block text-slate-500 mb-1">依變項 (DV)</label>
               <input id="design-dv" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300"
-                     oninput="updateResearchDesign()">
+                     oninput="updateResearchDesign(); scheduleSaveState();">
             </div>
             <div>
               <label class="block text-slate-500 mb-1">中介 / 調節</label>
               <input id="design-medmod" type="text"
                      class="w-full px-2 py-1.5 rounded border border-slate-300"
                      placeholder="Learning motivation (M), Gender (Mod)…"
-                     oninput="updateResearchDesign()">
+                     oninput="updateResearchDesign(); scheduleSaveState();">
             </div>
           </div>
           <div class="mt-3">
@@ -329,7 +325,6 @@
                    placeholder="輸入 author / keyword 搜尋"
                    oninput="renderLiteratureList()">
             <div id="lit-list" class="max-h-52 overflow-y-auto scroll-thin border border-slate-200 rounded p-2 bg-slate-50 text-[11px]">
-              <!-- items -->
             </div>
             <button class="mt-2 px-3 py-1 rounded-full bg-emerald-600 text-white text-[11px] hover:bg-emerald-700"
                     onclick="generateReferencesSection()">
@@ -378,12 +373,14 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label class="block text-slate-500 mb-1">上傳原始數據（選用）</label>
-              <input id="data-raw-file" type="file" accept=".xlsx,.csv,.sav" class="text-[11px]">
+              <input id="data-raw-file" type="file" accept=".xlsx,.csv,.sav" class="text-[11px]"
+                     onchange="handleDataRawUpload(event)">
               <p class="text-[10px] text-slate-400 mt-1">建議仍以本地統計軟體分析，本系統偏向協助撰寫。</p>
             </div>
             <div>
               <label class="block text-slate-500 mb-1">上傳分析輸出（表格/結果摘要）</label>
-              <input id="data-output-file" type="file" accept=".xlsx,.csv,.txt,.docx,.pdf" class="text-[11px]">
+              <input id="data-output-file" type="file" accept=".xlsx,.csv,.txt" class="text-[11px]"
+                     onchange="handleDataOutputUpload(event)">
               <p class="text-[10px] text-slate-400 mt-1">可上傳整理後的分析表格，後端可進一步解析。</p>
             </div>
             <div>
@@ -391,7 +388,7 @@
               <textarea id="data-notes" rows="3"
                         class="w-full px-2 py-1.5 rounded border border-slate-300"
                         placeholder="簡要說明你做了哪些統計分析，例如：2x2 混合設計 ANOVA, MLR, LCA…"
-                        oninput="updateDataMeta()"></textarea>
+                        oninput="updateDataMeta(); scheduleSaveState()"></textarea>
             </div>
           </div>
         </div>
@@ -424,10 +421,8 @@
               </div>
             </div>
             <div class="p-2 border-b border-slate-200 bg-slate-50 text-[11px]" id="chapter-checklist">
-              <!-- filled by JS -->
             </div>
             <div id="chat-panel" class="flex-1 overflow-y-auto scroll-thin p-2 space-y-2 bg-slate-50">
-              <!-- chat messages -->
             </div>
             <div class="border-t border-slate-200 p-2 space-y-1">
               <div class="flex items-center gap-1 mb-1">
@@ -446,7 +441,16 @@
                   <i class="fa-solid fa-bookmark mr-1"></i>AI 自動配文獻（僅用 referencePool）
                 </button>
               </div>
-              <div class="relative">
+              <div class="flex items-center justify-between mb-1 text-[10px]">
+                <span class="text-slate-500">快照 / 版本</span>
+                <button class="px-2 py-1 rounded border border-slate-300 hover:bg-slate-100"
+                        onclick="createSnapshot()">
+                  <i class="fa-solid fa-camera mr-1"></i>儲存快照
+                </button>
+              </div>
+              <div id="snapshot-list" class="max-h-20 overflow-y-auto scroll-thin text-[10px] space-y-1">
+              </div>
+              <div class="relative mt-1">
                 <textarea id="ai-input" rows="2"
                           class="w-full px-2 pr-8 py-1.5 rounded border border-slate-300 text-[11px]"
                           placeholder="輸入額外指令（可留白，直接生成）"
@@ -479,13 +483,12 @@
                 <option value="fullpaper">10. 全文整合</option>
               </select>
               <div class="flex-1"></div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-col items-end gap-0.5">
                 <span id="chapter-word-count" class="text-slate-500">本章字數：0</span>
                 <span id="total-word-count" class="text-slate-400">全文字數：0</span>
               </div>
             </div>
 
-            <!-- 章節編輯器：每章一個 textarea，只允許從 referencePool 插入引文 -->
             <div id="chapter-editors" class="flex-1 overflow-hidden">
               <textarea
                 class="chapter-editor w-full h-full resize-none p-3 text-xs border-0 focus:outline-none bg-transparent scroll-thin"
@@ -553,8 +556,11 @@
           <h2 class="font-semibold text-slate-800 text-sm mb-2 flex items-center gap-2">
             <i class="fa-solid fa-envelope-open-text text-indigo-500"></i> 投稿包總覽
           </h2>
-          <p class="text-[11px] text-slate-600">
+          <p class="text-[11px] text-slate-600 mb-2">
             在這裡彙整 cover letter、投稿信模板、回覆 reviewer 信件草稿與期刊投稿注意事項，可搭配上方寫作區的全文內容與 References 一起輸出。
+          </p>
+          <p class="text-[10px] text-slate-500">
+            （此區功能可依實際工作流程擴充，如：儲存多版本投稿信模板、對應 R1/R2 審查意見等）
           </p>
         </div>
       </div>
@@ -564,14 +570,115 @@
 </main>
 
 <script>
-  // 全域狀態：引用一律來自 referencePool
+  /**********************
+   * 後端設定與共用工具 *
+   **********************/
+  const BACKEND_CONFIG = {
+    // 實際使用時請改成你的 Apps Script 或其他後端 Web API URL
+    API_BASE_URL: '', // 例如："https://script.google.com/macros/s/XXX/exec"
+    USE_MOCK: true    // 開發階段用 mock；要打真後端時改成 false 並設定 API_BASE_URL
+  };
+
+  async function callBackend(endpoint, payload) {
+    // 若未設定 API_BASE_URL 或仍在 mock 模式，就回傳假的結果，至少 UI 不會掛
+    if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
+      console.warn('[ScholarCraft] 使用 mock 後端：', endpoint, payload);
+      await new Promise(r => setTimeout(r, 400)); // 模擬延遲
+      if (endpoint === '/generateChapter') {
+        return {
+          ok: true,
+          data: {
+            text: (payload.chapterText || '') + '\n\n[Mock AI] 這是示意草稿，請接上真實後端以取得正式內容。'
+          }
+        };
+      }
+      if (endpoint === '/reviewChapter') {
+        return {
+          ok: true,
+          data: {
+            summary: 'Mock Reviewer：整體結構大致合理，但請補強理論脈絡與方法論嚴謹度。',
+            comments: [
+              '1. 建議在開頭更清楚界定研究問題與研究貢獻。',
+              '2. 文獻整合部分可以增加近五年的 SSCI 研究。',
+              '3. 結果與討論應更緊密對應研究問題。'
+            ]
+          }
+        };
+      }
+      if (endpoint === '/autoCiteChapter') {
+        return {
+          ok: true,
+          data: {
+            text: payload.chapterText + '\n\n[Mock AI] 已示意性標記引用，實際配文獻請由真實後端完成。'
+          }
+        };
+      }
+      if (endpoint === '/resultsDraft') {
+        return {
+          ok: true,
+          data: { text: '[Mock AI] 這裡會根據你上傳的分析輸出，生成結果敘述草稿。' }
+        };
+      }
+      if (endpoint === '/methodDraft') {
+        return {
+          ok: true,
+          data: { text: '[Mock AI] 這裡會根據研究設計與 RQ，生成方法章節草稿。' }
+        };
+      }
+      if (endpoint === '/syncReferences') {
+        return { ok: true, data: { message: 'Mock：文獻庫已同步（實際未寫入後端）。' } };
+      }
+      return { ok: true, data: {} };
+    }
+
+    try {
+      const res = await fetch(BACKEND_CONFIG.API_BASE_URL + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {})
+      });
+      if (!res.ok) {
+        console.error('Backend HTTP error', res.status, await res.text());
+        return { ok: false, error: 'HTTP ' + res.status };
+      }
+      const data = await res.json();
+      return { ok: true, data };
+    } catch (err) {
+      console.error('Backend fetch error', err);
+      return { ok: false, error: err.message || String(err) };
+    }
+  }
+
+  function escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+
+  /**********************
+   * 全域狀態：v3       *
+   **********************/
+  const STORAGE_KEY = 'scholarcraft_v3_project';
+  let saveTimer = null;
+
   const state = {
-    currentTab: 'project',
-    currentChapter: 'outline',
+    projectId: 'default',
     lang: 'zh-TW',
     stylePreset: 'balanced',
-    referencePool: [],          // 上傳後的文獻池
-    usedCitationIds: new Set(), // 實際在正文中被偵測到的文獻 id
+    projectMeta: {
+      title: '',
+      field: '',
+      year: '2025',
+      journalKey: ''
+    },
+    referencePool: [],
+    usedCitationIds: new Set(),
     chapters: {
       outline: '',
       intro: '',
@@ -585,37 +692,126 @@
       abstract: '',
       fullpaper: ''
     },
-    journalProfiles: {
-      taper: {
-        name: 'Asia-Pacific Education Researcher',
-        abbr: 'TAPER',
-        scope: 'Education · Asia-Pacific · empirical and theoretical studies',
-        wordLimit: '約 8,000–10,000 字',
-        style: 'APA 7th edition',
-        note: '偏向實證研究與區域性教育議題。'
-      },
-      se: {
-        name: 'Science Education',
-        abbr: 'SciEd',
-        scope: 'Science education · conceptual and empirical research',
-        wordLimit: '約 10,000 字以內',
-        style: 'APA 7th edition',
-        note: '高度理論整合與方法論嚴謹度要求。'
-      }
-    }
+    // 研究設計
+    design: {
+      type: '',
+      context: '',
+      sample: '',
+      instruments: '',
+      iv: '',
+      dv: '',
+      medmod: ''
+    },
+    rqs: [],          // [{id:'RQ1', text:'...'}]
+    hypotheses: [],   // [{id:'H1', text:'...'}]
+    analysisPlan: {}, // { 'RQ1': { method:'ANOVA', note:'...' } }
+    // 數據
+    dataMeta: {
+      notes: '',
+      rawFileName: '',
+      outputFileName: ''
+    },
+    // 文獻
+    litFilesMeta: {
+      sourceFileName: ''
+    },
+    // 快照
+    snapshots: []     // [{id, label, createdAt, chapters}]
   };
 
   document.addEventListener('DOMContentLoaded', () => {
+    loadStateFromStorage();
     initNav();
     initLangSelect();
     initJournalSelect();
+    initChecklist();
+    renderRQList();
+    renderHypothesisList();
+    renderAnalysisPlan();
+    renderAnalysisPlanData();
+    renderSnapshotList();
     updateProjectMeta();
     switchTab('project');
     switchChapter(); // 初始化章節
-    initChecklist();
+    renderLiteratureList();
+    renderLiteraturePreview();
   });
 
-  // --------- UI 初始化 ----------
+  function scheduleSaveState() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveStateToStorage, 500);
+  }
+
+  function saveStateToStorage() {
+    try {
+      const safeState = {
+        projectId: state.projectId,
+        lang: state.lang,
+        stylePreset: state.stylePreset,
+        projectMeta: state.projectMeta,
+        chapters: state.chapters,
+        design: state.design,
+        rqs: state.rqs,
+        hypotheses: state.hypotheses,
+        analysisPlan: state.analysisPlan,
+        dataMeta: state.dataMeta,
+        litFilesMeta: state.litFilesMeta,
+        snapshots: state.snapshots,
+        referencePool: state.referencePool
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
+    } catch (e) {
+      console.warn('儲存到 localStorage 失敗：', e);
+    }
+  }
+
+  function loadStateFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') return;
+
+      // 合併回 state
+      Object.assign(state, {
+        projectId: saved.projectId || 'default',
+        lang: saved.lang || 'zh-TW',
+        stylePreset: saved.stylePreset || 'balanced',
+        projectMeta: Object.assign({}, state.projectMeta, saved.projectMeta || {}),
+        chapters: Object.assign({}, state.chapters, saved.chapters || {}),
+        design: Object.assign({}, state.design, saved.design || {}),
+        rqs: saved.rqs || [],
+        hypotheses: saved.hypotheses || [],
+        analysisPlan: saved.analysisPlan || {},
+        dataMeta: Object.assign({}, state.dataMeta, saved.dataMeta || {}),
+        litFilesMeta: Object.assign({}, state.litFilesMeta, saved.litFilesMeta || {}),
+        snapshots: saved.snapshots || [],
+        referencePool: saved.referencePool || []
+      });
+
+      // 回填 UI
+      document.getElementById('project-title').value = state.projectMeta.title || '';
+      document.getElementById('project-field').value = state.projectMeta.field || '';
+      document.getElementById('project-year').value = state.projectMeta.year || '2025';
+      document.getElementById('design-type').value = state.design.type || '';
+      document.getElementById('design-context').value = state.design.context || '';
+      document.getElementById('design-sample').value = state.design.sample || '';
+      document.getElementById('design-instruments').value = state.design.instruments || '';
+      document.getElementById('design-iv').value = state.design.iv || '';
+      document.getElementById('design-dv').value = state.design.dv || '';
+      document.getElementById('design-medmod').value = state.design.medmod || '';
+      document.getElementById('data-notes').value = state.dataMeta.notes || '';
+      document.getElementById('style-preset').value = state.stylePreset || 'balanced';
+
+      // 語言選單會在 initLangSelect 中設定 value
+    } catch (e) {
+      console.warn('讀取 localStorage 失敗：', e);
+    }
+  }
+
+  /**********************
+   * UI 初始化與導覽     *
+   **********************/
 
   function initNav() {
     const firstNav = document.querySelector('.nav-btn[data-tab="project"]');
@@ -636,9 +832,10 @@
       o.textContent = opt.label;
       sel.appendChild(o);
     });
-    sel.value = state.lang;
+    sel.value = state.lang || 'zh-TW';
     sel.addEventListener('change', () => {
       state.lang = sel.value;
+      scheduleSaveState();
     });
   }
 
@@ -651,39 +848,25 @@
     placeholder.textContent = '請選擇目標期刊';
     sel.appendChild(placeholder);
 
-    Object.entries(state.journalProfiles).forEach(([key, jp]) => {
+    Object.entries(state.journalProfiles || {}).forEach(([key, jp]) => {
       const o = document.createElement('option');
       o.value = key;
       o.textContent = `${jp.name} (${jp.abbr})`;
       sel.appendChild(o);
     });
+
+    if (state.projectMeta.journalKey) {
+      sel.value = state.projectMeta.journalKey;
+      updateJournalProfile();
+    }
   }
 
   function initChecklist() {
     const checklist = document.getElementById('chapter-checklist');
     if (!checklist) return;
-    checklist.innerHTML = `
-      <div class="flex items-center justify-between mb-1">
-        <span>本章寫作重點快速檢核</span>
-      </div>
-      <ul class="space-y-1">
-        <li class="flex items-start gap-2">
-          <span class="mt-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          <span>是否清楚回應研究問題與目的？</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <span class="mt-0.5 w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-          <span>是否適當整合文獻並避免大段抄寫？</span>
-        </li>
-        <li class="flex items-start gap-2">
-          <span class="mt-0.5 w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span>是否有清楚標示與 APA 7th 一致的引文？</span>
-        </li>
-      </ul>
-    `;
+    // 動態依章節切換的 checklist 在 switchChapter() 裡更新
+    updateChecklistForChapter(state.currentChapter || 'outline');
   }
-
-  // --------- 導覽 / 章節 ----------
 
   function switchTab(tabId) {
     state.currentTab = tabId;
@@ -714,6 +897,12 @@
     }
   }
 
+  /**********************
+   * 章節切換與字數計算 *
+   **********************/
+
+  state.currentChapter = 'outline';
+
   function switchChapter() {
     const sel = document.getElementById('chapter-select');
     if (!sel) return;
@@ -733,59 +922,105 @@
     if (label) {
       label.textContent = sel.options[sel.selectedIndex].textContent || chapterKey;
     }
+    updateChecklistForChapter(chapterKey);
     updateWordCounts();
   }
 
   function onChapterInput(chapterKey, text) {
     state.chapters[chapterKey] = text;
     updateWordCounts();
+    scheduleSaveState();
   }
 
   function getCurrentEditor() {
     return document.querySelector('.chapter-editor[data-chapter="' + state.currentChapter + '"]');
   }
 
-  function updateWordCounts() {
-    const chapterText = state.chapters[state.currentChapter] || '';
-    const chapterWordCount = countWords(chapterText);
-    let total = 0;
-    Object.values(state.chapters).forEach(t => total += countWords(t || ''));
-
-    const chapterSpan = document.getElementById('chapter-word-count');
-    const totalSpan = document.getElementById('total-word-count');
-    if (chapterSpan) chapterSpan.textContent = '本章字數：' + chapterWordCount;
-    if (totalSpan) totalSpan.textContent = '全文字數：' + total;
-  }
-
-  // 「字數」計算：英文以空白分詞，中文以字數計（只計算 CJK 字）
-  function countWords(text) {
-    if (!text) return 0;
+  function getWordStats(text) {
+    if (!text) return { cjkChars: 0, enWords: 0, total: 0 };
     const trimmed = text.trim();
-    if (!trimmed) return 0;
+    if (!trimmed) return { cjkChars: 0, enWords: 0, total: 0 };
 
     const rawTokens = trimmed.split(/\s+/).filter(Boolean);
-    let count = 0;
+    let cjkChars = 0;
+    let enWords = 0;
 
     rawTokens.forEach(tok => {
       const cjkMatches = tok.match(/[\u4e00-\u9fff]/g);
       if (cjkMatches && cjkMatches.length > 0) {
-        // 只計算 CJK 字元數，忽略其中的標點與拉丁字
-        count += cjkMatches.length;
+        cjkChars += cjkMatches.length;
       } else {
-        // 非 CJK token 視為一個 word
-        count += 1;
+        // 非 CJK token 當作 1 個英文單字
+        enWords += 1;
       }
     });
 
-    return count;
+    return {
+      cjkChars,
+      enWords,
+      total: cjkChars + enWords
+    };
   }
 
-  // --------- 專案 / 期刊 ----------
+  function countWords(text) {
+    return getWordStats(text).total;
+  }
+
+  function updateWordCounts() {
+    const chapterText = state.chapters[state.currentChapter] || '';
+    const chapterStats = getWordStats(chapterText);
+
+    let totalStats = { cjkChars: 0, enWords: 0, total: 0 };
+    Object.values(state.chapters).forEach(t => {
+      const stats = getWordStats(t || '');
+      totalStats.cjkChars += stats.cjkChars;
+      totalStats.enWords += stats.enWords;
+      totalStats.total += stats.total;
+    });
+
+    const chapterSpan = document.getElementById('chapter-word-count');
+    const totalSpan = document.getElementById('total-word-count');
+    if (chapterSpan) {
+      chapterSpan.textContent =
+        `本章字數：約 ${chapterStats.total}（中：${chapterStats.cjkChars} 字 / 英：${chapterStats.enWords} words）`;
+    }
+    if (totalSpan) {
+      totalSpan.textContent =
+        `全文字數：約 ${totalStats.total}（中：${totalStats.cjkChars} 字 / 英：${totalStats.enWords} words）`;
+    }
+  }
+
+  /**********************
+   * 專案與期刊設定     *
+   **********************/
+
+  state.journalProfiles = {
+    taper: {
+      name: 'Asia-Pacific Education Researcher',
+      abbr: 'TAPER',
+      scope: 'Education · Asia-Pacific · empirical and theoretical studies',
+      wordLimit: '約 8,000–10,000 英文字',
+      style: 'APA 7th edition',
+      note: '偏向實證研究與區域性教育議題。'
+    },
+    se: {
+      name: 'Science Education',
+      abbr: 'SciEd',
+      scope: 'Science education · conceptual and empirical research',
+      wordLimit: '約 10,000 英文字以內',
+      style: 'APA 7th edition',
+      note: '高度理論整合與方法論嚴謹度要求。'
+    }
+  };
 
   function updateProjectMeta() {
-    const title = document.getElementById('project-title')?.value || '未命名專案';
+    const title = document.getElementById('project-title')?.value || '';
     const field = document.getElementById('project-field')?.value || '';
     const year = document.getElementById('project-year')?.value || '';
+
+    state.projectMeta.title = title;
+    state.projectMeta.field = field;
+    state.projectMeta.year = year || '2025';
 
     const sidebarName = document.getElementById('sidebar-project-name');
     if (sidebarName) sidebarName.textContent = title || '未命名專案';
@@ -802,11 +1037,11 @@
     const sel = document.getElementById('journal-select');
     if (!sel) return;
     const key = sel.value;
+    state.projectMeta.journalKey = key;
     const profile = state.journalProfiles[key];
     const box = document.getElementById('journal-profile-summary');
     if (!box) return;
 
-    box.innerHTML = '';
     const sidebarJournal = document.getElementById('sidebar-journal');
     if (sidebarJournal) {
       sidebarJournal.textContent = profile ? profile.name : '未設定';
@@ -830,14 +1065,206 @@
     const sel = document.getElementById('style-preset');
     if (!sel) return;
     state.stylePreset = sel.value;
+    scheduleSaveState();
   }
 
-  // --------- 文獻池 referencePool：只允許從這裡引用 ----------
+  /**********************
+   * 研究設計 / RQ / H *
+   **********************/
+
+  function updateResearchDesign() {
+    state.design.type = document.getElementById('design-type').value || '';
+    state.design.context = document.getElementById('design-context').value || '';
+    state.design.sample = document.getElementById('design-sample').value || '';
+    state.design.instruments = document.getElementById('design-instruments').value || '';
+    state.design.iv = document.getElementById('design-iv').value || '';
+    state.design.dv = document.getElementById('design-dv').value || '';
+    state.design.medmod = document.getElementById('design-medmod').value || '';
+    renderAnalysisPlan();
+    renderAnalysisPlanData();
+  }
+
+  function addRQ() {
+    const id = 'RQ' + (state.rqs.length + 1);
+    state.rqs.push({ id, text: '' });
+    renderRQList();
+    renderAnalysisPlan();
+    renderAnalysisPlanData();
+    scheduleSaveState();
+  }
+
+  function updateRQText(id, text) {
+    const rq = state.rqs.find(r => r.id === id);
+    if (rq) rq.text = text;
+    scheduleSaveState();
+  }
+
+  function removeRQ(id) {
+    state.rqs = state.rqs.filter(r => r.id !== id);
+    delete state.analysisPlan[id];
+    renderRQList();
+    renderAnalysisPlan();
+    renderAnalysisPlanData();
+    scheduleSaveState();
+  }
+
+  function renderRQList() {
+    const list = document.getElementById('rq-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!state.rqs.length) {
+      list.innerHTML = '<p class="text-[11px] text-slate-400">尚未新增 RQ。</p>';
+      return;
+    }
+    state.rqs.forEach(rq => {
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded p-1.5 bg-white';
+      div.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-slate-500 font-semibold">${rq.id}</span>
+          <button class="text-[10px] text-rose-500 hover:underline" onclick="removeRQ('${rq.id}')">
+            刪除
+          </button>
+        </div>
+        <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
+          placeholder="撰寫研究問題"
+          oninput="updateRQText('${rq.id}', this.value)">${escapeHtml(rq.text || '')}</textarea>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  function addHypothesis() {
+    const id = 'H' + (state.hypotheses.length + 1);
+    state.hypotheses.push({ id, text: '' });
+    renderHypothesisList();
+    scheduleSaveState();
+  }
+
+  function updateHypothesisText(id, text) {
+    const h = state.hypotheses.find(x => x.id === id);
+    if (h) h.text = text;
+    scheduleSaveState();
+  }
+
+  function removeHypothesis(id) {
+    state.hypotheses = state.hypotheses.filter(h => h.id !== id);
+    renderHypothesisList();
+    scheduleSaveState();
+  }
+
+  function renderHypothesisList() {
+    const list = document.getElementById('hypo-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!state.hypotheses.length) {
+      list.innerHTML = '<p class="text-[11px] text-slate-400">尚未新增假設。</p>';
+      return;
+    }
+    state.hypotheses.forEach(h => {
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded p-1.5 bg-white';
+      div.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-slate-500 font-semibold">${h.id}</span>
+          <button class="text-[10px] text-rose-500 hover:underline" onclick="removeHypothesis('${h.id}')">
+            刪除
+          </button>
+        </div>
+        <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
+          placeholder="撰寫研究假設"
+          oninput="updateHypothesisText('${h.id}', this.value)">${escapeHtml(h.text || '')}</textarea>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  function setAnalysisMethod(rqId, method) {
+    if (!state.analysisPlan[rqId]) state.analysisPlan[rqId] = {};
+    state.analysisPlan[rqId].method = method;
+    renderAnalysisPlanData();
+    scheduleSaveState();
+  }
+
+  function setAnalysisNote(rqId, note) {
+    if (!state.analysisPlan[rqId]) state.analysisPlan[rqId] = {};
+    state.analysisPlan[rqId].note = note;
+    scheduleSaveState();
+  }
+
+  function renderAnalysisPlan() {
+    const box = document.getElementById('analysis-plan');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!state.rqs.length) {
+      box.innerHTML = '<p class="text-[11px] text-slate-400">尚未設定 RQ，無法建立分析對應。</p>';
+      return;
+    }
+    state.rqs.forEach(rq => {
+      const plan = state.analysisPlan[rq.id] || {};
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded p-2 bg-white';
+      div.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-slate-600 font-semibold">${rq.id}</span>
+          <span class="text-[10px] text-slate-400">主要分析方法</span>
+        </div>
+        <div class="flex items-center gap-2 mb-1">
+          <select class="px-2 py-1 rounded border border-slate-300 text-[11px]"
+                  onchange="setAnalysisMethod('${rq.id}', this.value)">
+            <option value="">未指定</option>
+            <option value="t-test" ${plan.method==='t-test'?'selected':''}>t-test</option>
+            <option value="ANOVA" ${plan.method==='ANOVA'?'selected':''}>ANOVA / ANCOVA</option>
+            <option value="MLR" ${plan.method==='MLR'?'selected':''}>多元迴歸 (MLR)</option>
+            <option value="SEM" ${plan.method==='SEM'?'selected':''}>結構方程 (SEM)</option>
+            <option value="LMM" ${plan.method==='LMM'?'selected':''}>線性混合模式 (LMM)</option>
+            <option value="LCA" ${plan.method==='LCA'?'selected':''}>潛在類別分析 (LCA)</option>
+            <option value="Qual" ${plan.method==='Qual'?'selected':''}>質性主題分析</option>
+          </select>
+        </div>
+        <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
+          placeholder="補充：主要 DV / 統計控制變項 / 重要備註"
+          oninput="setAnalysisNote('${rq.id}', this.value)">${escapeHtml(plan.note || '')}</textarea>
+      `;
+      box.appendChild(div);
+    });
+  }
+
+  function renderAnalysisPlanData() {
+    const box = document.getElementById('analysis-plan-data');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!state.rqs.length) {
+      box.innerHTML = '<p class="text-[11px] text-slate-400">尚未設定 RQ。</p>';
+      return;
+    }
+    state.rqs.forEach(rq => {
+      const plan = state.analysisPlan[rq.id] || {};
+      const div = document.createElement('div');
+      div.className = 'border border-slate-200 rounded p-2 bg-white';
+      div.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-semibold text-slate-700">${rq.id}</span>
+          <span class="text-[10px] text-slate-400">${plan.method || '分析方法未設定'}</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mb-1">${escapeHtml(rq.text || '尚未撰寫 RQ 內容')}</p>
+        <p class="text-[10px] text-slate-500">
+          ${plan.note ? escapeHtml(plan.note) : '尚未補充分析備註。'}
+        </p>
+      `;
+      box.appendChild(div);
+    });
+  }
+
+  /**********************
+   * 文獻庫 referencePool
+   **********************/
 
   function handleLiteratureUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    state.litFilesMeta.sourceFileName = file.name;
     const reader = new FileReader();
     reader.onload = e => {
       const data = new Uint8Array(e.target.result);
@@ -846,7 +1273,8 @@
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet);
 
-      state.referencePool = rows.map((row, idx) => {
+      const pool = [];
+      rows.forEach((row, idx) => {
         const authorsRaw =
           row.Author ||
           row.Authors ||
@@ -881,21 +1309,34 @@
           row['DI'] ||
           '';
 
-        return {
+        const authors = (authorsRaw || '').toString().trim();
+        const year = (yearRaw || '').toString().trim();
+        const title = (titleRaw || '').toString().trim();
+        const journal = (journalRaw || '').toString().trim();
+        const doi = (doiRaw || '').toString().trim();
+
+        if (!authors && !year && !title && !journal) {
+          console.warn('文獻第 ' + (idx+1) + ' 筆欄位皆為空，已略過。');
+          return;
+        }
+
+        pool.push({
           id: 'ref-' + (idx + 1),
-          authors: authorsRaw.toString().trim(),
-          year: yearRaw.toString().trim(),
-          title: titleRaw.toString().trim(),
-          journal: journalRaw.toString().trim(),
-          doi: doiRaw.toString().trim()
-        };
+          authors,
+          year,
+          title,
+          journal,
+          doi
+        });
       });
 
+      state.referencePool = pool;
       const litCount = document.getElementById('lit-count');
       if (litCount) litCount.textContent = state.referencePool.length;
 
       renderLiteratureList();
       renderLiteraturePreview();
+      scheduleSaveState();
     };
     reader.readAsArrayBuffer(file);
   }
@@ -955,16 +1396,25 @@
     });
   }
 
-  function syncLiteratureToBackend() {
-    // 保留函式名稱供後端整合使用，這裡只做基本檢查與提示
+  async function syncLiteratureToBackend() {
     if (!state.referencePool.length) {
       alert('請先上傳文獻庫（referencePool）。');
       return;
     }
-    alert('文獻庫已載入至前端狀態（referencePool）。如需同步到後端，請在 code.gs 中實作。');
+    const result = await callBackend('/syncReferences', {
+      projectId: state.projectId,
+      referencePool: state.referencePool
+    });
+    if (!result.ok) {
+      alert('同步到後端失敗：' + (result.error || '未知錯誤'));
+      return;
+    }
+    alert(result.data.message || '文獻庫已送出後端處理。');
   }
 
-  // --------- 引文插入：只能來自 referencePool ----------
+  /**********************
+   * 引文插入與 References
+   **********************/
 
   function insertCitation(refId) {
     const ref = state.referencePool.find(r => r.id === refId);
@@ -984,10 +1434,8 @@
 
     let authorSurname = firstAuthorRaw;
     if (firstAuthorRaw.includes(',')) {
-      // 常見格式：Surname, Initials
       authorSurname = firstAuthorRaw.split(',')[0].trim();
     } else {
-      // 常見格式：Initials Surname 或 Surname Initials
       const parts = firstAuthorRaw.split(/\s+/).filter(Boolean);
       if (parts.length > 1) {
         authorSurname = parts[parts.length - 1];
@@ -1012,90 +1460,12 @@
     const chapterKey = state.currentChapter;
     state.chapters[chapterKey] = editor.value;
     updateWordCounts();
+    scheduleSaveState();
 
-    // 記錄該文獻有被使用
     state.usedCitationIds.add(ref.id);
   }
 
-  // --------- APA 引文掃描與 References 產生 ----------
-
-  function generateReferencesSection() {
-    if (!state.referencePool.length) {
-      alert('請先上傳文獻庫（referencePool）。');
-      return;
-    }
-
-    const report = scanAllCitationsAndUpdateUsed();
-    if (!report.matchedIds.size) {
-      alert('尚未偵測到任何符合 APA 格式且存在於 referencePool 的引文。');
-      return;
-    }
-
-    const refs = state.referencePool.filter(ref => report.matchedIds.has(ref.id));
-    refs.sort((a, b) => {
-      const aKey = (a.authors || '') + (a.year || '');
-      const bKey = (b.authors || '') + (b.year || '');
-      return aKey.localeCompare(bKey);
-    });
-
-    const lines = refs.map(formatReferenceAPA);
-    const sectionText = 'References\n' + lines.join('\n');
-
-    const fullEditor = document.querySelector('.chapter-editor[data-chapter="fullpaper"]');
-    if (!fullEditor) {
-      alert('找不到「全文整合」章節編輯器，已在 console 中輸出 References。');
-      console.log(sectionText);
-      return;
-    }
-
-    // 若全文已經有 References，先簡單移除末尾舊的，再加上新的
-    const current = fullEditor.value || '';
-    const withoutOld = current.replace(/\s*References[\s\S]*$/i, '').trimEnd();
-    fullEditor.value = (withoutOld ? withoutOld + '\n\n' : '') + sectionText;
-    state.chapters.fullpaper = fullEditor.value;
-    updateWordCounts();
-
-    if (report.unmatched.length) {
-      const sample = report.unmatched.slice(0, 5).map(u =>
-        `${u.chapterKey}: (${u.rawAuthor}, ${u.year})`
-      ).join('\n');
-      alert(
-        '已忽略 ' + report.unmatched.length +
-        ' 筆不在 referencePool 的引文，未納入 References。\n\n前幾筆範例：\n' +
-        sample
-      );
-    } else {
-      alert('已依照實際引用，從 referencePool 產生 References 區段。');
-    }
-  }
-
-  function scanAllCitationsAndUpdateUsed() {
-    const unmatched = [];
-    const matchedIds = new Set();
-
-    Object.entries(state.chapters).forEach(([chapterKey, text]) => {
-      if (!text) return;
-      const citations = extractAPACitations(text);
-      citations.forEach(cit => {
-        const ref = findRefByAuthorYear(cit.author, cit.year);
-        if (ref) {
-          matchedIds.add(ref.id);
-        } else {
-          unmatched.push({
-            chapterKey,
-            rawAuthor: cit.author,
-            year: cit.year
-          });
-        }
-      });
-    });
-
-    state.usedCitationIds = matchedIds;
-    return { matchedIds, unmatched };
-  }
-
   function extractAPACitations(text) {
-    // 粗略抓取 (Author, 2020) 形式，引號內不處理
     const regex = /\(([A-Z][A-Za-z\-]+(?:\s+(?:et al\.|&\s+[A-Z][A-Za-z\-]+))?),\s*(\d{4}[a-z]?)\)/g;
     const result = [];
     let match;
@@ -1106,6 +1476,12 @@
       });
     }
     return result;
+  }
+
+  function normalizeName(name) {
+    return (name || '')
+      .toLowerCase()
+      .replace(/[^a-z\u4e00-\u9fff]/g, '');
   }
 
   function findRefByAuthorYear(author, year) {
@@ -1142,15 +1518,303 @@
     return line;
   }
 
-  function normalizeName(name) {
-    return (name || '')
-      .toLowerCase()
-      .replace(/[^a-z\u4e00-\u9fff]/g, '');
+  function scanAllCitationsAndUpdateUsed() {
+    const unmatched = [];
+    const matchedIds = new Set();
+
+    Object.entries(state.chapters).forEach(([chapterKey, text]) => {
+      if (!text) return;
+      const citations = extractAPACitations(text);
+      citations.forEach(cit => {
+        const ref = findRefByAuthorYear(cit.author, cit.year);
+        if (ref) {
+          matchedIds.add(ref.id);
+        } else {
+          unmatched.push({
+            chapterKey,
+            rawAuthor: cit.author,
+            year: cit.year
+          });
+        }
+      });
+    });
+
+    state.usedCitationIds = matchedIds;
+    return { matchedIds, unmatched };
   }
 
-  // --------- AI 自動配文獻：前端只負責送出資料與驗證回傳 ----------
+  function generateReferencesSection() {
+    if (!state.referencePool.length) {
+      alert('請先上傳文獻庫（referencePool）。');
+      return;
+    }
 
-  function runAutoCitationForCurrentChapter() {
+    const report = scanAllCitationsAndUpdateUsed();
+    if (!report.matchedIds.size) {
+      alert('尚未偵測到任何符合 APA 格式且存在於 referencePool 的引文。');
+      return;
+    }
+
+    const refs = state.referencePool.filter(ref => report.matchedIds.has(ref.id));
+    refs.sort((a, b) => {
+      const aKey = (a.authors || '') + (a.year || '');
+      const bKey = (b.authors || '') + (b.year || '');
+      return aKey.localeCompare(bKey);
+    });
+
+    const lines = refs.map(formatReferenceAPA);
+    const sectionText = 'References\n' + lines.join('\n');
+
+    const fullEditor = document.querySelector('.chapter-editor[data-chapter="fullpaper"]');
+    if (!fullEditor) {
+      console.log(sectionText);
+      alert('找不到「全文整合」章節編輯器，已在 console 中輸出 References。');
+      return;
+    }
+
+    const current = fullEditor.value || '';
+    const withoutOld = current.replace(/\s*References[\s\S]*$/i, '').trimEnd();
+    fullEditor.value = (withoutOld ? withoutOld + '\n\n' : '') + sectionText;
+    state.chapters.fullpaper = fullEditor.value;
+    updateWordCounts();
+    scheduleSaveState();
+
+    if (report.unmatched.length) {
+      const sample = report.unmatched.slice(0, 5).map(u =>
+        `${u.chapterKey}: (${u.rawAuthor}, ${u.year})`
+      ).join('\n');
+      alert(
+        '已忽略 ' + report.unmatched.length +
+        ' 筆不在 referencePool 的引文，未納入 References。\n\n前幾筆範例：\n' +
+        sample
+      );
+    } else {
+      alert('已依照實際引用，從 referencePool 產生 References 區段。');
+    }
+  }
+
+  /**********************
+   * Data / 結果草稿    *
+   **********************/
+
+  function handleDataRawUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    state.dataMeta.rawFileName = file.name;
+    scheduleSaveState();
+  }
+
+  function handleDataOutputUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    state.dataMeta.outputFileName = file.name;
+    scheduleSaveState();
+  }
+
+  function updateDataMeta() {
+    state.dataMeta.notes = document.getElementById('data-notes').value || '';
+  }
+
+  async function generateResultsDraft() {
+    const chapterKey = 'results';
+    const existing = state.chapters[chapterKey] || '';
+    const payload = {
+      projectId: state.projectId,
+      lang: state.lang,
+      stylePreset: state.stylePreset,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      rqs: state.rqs,
+      analysisPlan: state.analysisPlan,
+      dataMeta: state.dataMeta,
+      chapterKey,
+      chapterText: existing
+    };
+    appendChatSystem('[結果草稿] 正在呼叫後端生成結果章節草稿…');
+    const res = await callBackend('/resultsDraft', payload);
+    if (!res.ok) {
+      appendChatSystem('[結果草稿] 生成失敗：' + (res.error || '未知錯誤'));
+      alert('生成結果草稿失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const text = res.data.text || '';
+    state.chapters[chapterKey] = text;
+    if (state.currentChapter === chapterKey) {
+      const editor = getCurrentEditor();
+      if (editor) editor.value = text;
+    }
+    updateWordCounts();
+    scheduleSaveState();
+    appendChatSystem('[結果草稿] 已更新結果章節內容。');
+  }
+
+  /**********************
+   * AI 寫作 / Reviewer *
+   **********************/
+
+  function updateChecklistForChapter(chapterKey) {
+    const checklist = document.getElementById('chapter-checklist');
+    if (!checklist) return;
+    let items = [];
+    switch (chapterKey) {
+      case 'intro':
+        items = [
+          '是否清楚說明研究背景與研究動機？',
+          '是否界定研究問題與研究目的？',
+          '是否交代理論與實證缺口（research gap）？'
+        ];
+        break;
+      case 'lit_review':
+        items = [
+          '是否整合而非逐篇摘要文獻？',
+          '是否涵蓋近五年核心 SSCI 文獻？',
+          '是否清楚連結到研究問題與假設？'
+        ];
+        break;
+      case 'method':
+        items = [
+          '研究設計、對象、工具、程序是否交代完整？',
+          '統計方法是否與 RQ / 假設一致？',
+          '是否說明信效度與研究倫理？'
+        ];
+        break;
+      case 'results':
+        items = [
+          '是否依 RQ 順序呈現結果？',
+          '是否區分描述統計與推論統計？',
+          '表格與文字敘述是否一致，避免重複？'
+        ];
+        break;
+      case 'discussion':
+        items = [
+          '是否回到研究問題與理論架構進行討論？',
+          '是否連結既有文獻，說明相同或相異之處？',
+          '是否避免只重述結果，而有真正的解釋？'
+        ];
+        break;
+      default:
+        items = [
+          '本章是否清楚回應研究問題與目的？',
+          '是否適當整合文獻並避免大段抄寫？',
+          '是否有清楚標示與 APA 7th 一致的引文？'
+        ];
+    }
+    checklist.innerHTML = `
+      <div class="flex items-center justify-between mb-1">
+        <span>本章寫作重點快速檢核</span>
+      </div>
+      <ul class="space-y-1">
+        ${items.map((txt, i) => `
+          <li class="flex items-start gap-2">
+            <span class="mt-0.5 w-1.5 h-1.5 rounded-full ${
+              i===0 ? 'bg-emerald-500' : i===1 ? 'bg-indigo-500' : 'bg-amber-500'
+            }"></span>
+            <span>${txt}</span>
+          </li>
+        `).join('')}
+      </ul>
+    `;
+  }
+
+  function appendChatSystem(text) {
+    const panel = document.getElementById('chat-panel');
+    if (!panel) return;
+    const div = document.createElement('div');
+    div.className = 'bg-slate-100 border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-700';
+    div.textContent = text;
+    panel.appendChild(div);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function appendChatAI(text) {
+    const panel = document.getElementById('chat-panel');
+    if (!panel) return;
+    const div = document.createElement('div');
+    div.className = 'bg-white border border-indigo-200 rounded px-2 py-1 text-[11px]';
+    div.textContent = text;
+    panel.appendChild(div);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function appendChatUser(text) {
+    const panel = document.getElementById('chat-panel');
+    if (!panel) return;
+    const div = document.createElement('div');
+    div.className = 'bg-indigo-600 text-white rounded px-2 py-1 text-[11px] ml-4';
+    div.textContent = text;
+    panel.appendChild(div);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  async function generateChapterDraft() {
+    const chapterKey = state.currentChapter;
+    const existing = state.chapters[chapterKey] || '';
+    appendChatSystem(`[${chapterKey}] 正在呼叫後端生成本章草稿…`);
+
+    const payload = {
+      projectId: state.projectId,
+      lang: state.lang,
+      stylePreset: state.stylePreset,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      rqs: state.rqs,
+      hypotheses: state.hypotheses,
+      analysisPlan: state.analysisPlan,
+      chapterKey,
+      chapterText: existing
+    };
+    const res = await callBackend('/generateChapter', payload);
+    if (!res.ok) {
+      appendChatSystem('生成本章草稿失敗：' + (res.error || '未知錯誤'));
+      alert('生成本章草稿失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const text = res.data.text || '';
+    state.chapters[chapterKey] = text;
+    if (state.currentChapter === chapterKey) {
+      const editor = getCurrentEditor();
+      if (editor) editor.value = text;
+    }
+    updateWordCounts();
+    scheduleSaveState();
+    appendChatAI('本章草稿已更新於編輯區，請進一步人工調整。');
+  }
+
+  async function runReviewerMode() {
+    const chapterKey = state.currentChapter;
+    const text = state.chapters[chapterKey] || '';
+    if (!text.trim()) {
+      alert('本章尚無內容，無法進行 Reviewer 模式。');
+      return;
+    }
+    appendChatSystem(`[${chapterKey}] 正在呼叫 Reviewer 模式進行批改與評論…`);
+
+    const payload = {
+      projectId: state.projectId,
+      lang: state.lang,
+      stylePreset: state.stylePreset,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      rqs: state.rqs,
+      hypotheses: state.hypotheses,
+      analysisPlan: state.analysisPlan,
+      chapterKey,
+      chapterText: text
+    };
+    const res = await callBackend('/reviewChapter', payload);
+    if (!res.ok) {
+      appendChatSystem('Reviewer 模式失敗：' + (res.error || '未知錯誤'));
+      alert('Reviewer 模式失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const data = res.data || {};
+    if (data.summary) appendChatAI('總評：' + data.summary);
+    if (Array.isArray(data.comments)) {
+      data.comments.forEach(c => appendChatAI(c));
+    }
+  }
+
+  async function runAutoCitationForCurrentChapter() {
     if (!state.referencePool.length) {
       alert('請先在「文獻＆引用」頁上傳文獻庫（referencePool）。');
       return;
@@ -1161,109 +1825,196 @@
       alert('本章尚未有文字內容。');
       return;
     }
+    appendChatSystem(`[${chapterKey}] 正在呼叫後端進行自動配文獻…`);
 
-    // 這裡預留給後端（code.gs）整合：
-    // 1. 後端接收 chapterText + referencePool
-    // 2. 逐句比對、決定句首／句末 APA 引文
-    // 3. 僅使用 referencePool 中的文獻
-    // 4. 回傳完成配引的章節文字
-    alert('目前前端僅完成「只允許 referencePool 引文」與 APA 檢查。\n' +
-          '逐句比對與自動配文獻請在 code.gs 中實作對應 API，\n' +
-          '再於此函式中呼叫該 API 並更新 state.chapters。');
+    const payload = {
+      projectId: state.projectId,
+      lang: state.lang,
+      chapterKey,
+      chapterText: text,
+      referencePool: state.referencePool
+    };
+    const res = await callBackend('/autoCiteChapter', payload);
+    if (!res.ok) {
+      appendChatSystem('AI 自動配文獻失敗：' + (res.error || '未知錯誤'));
+      alert('AI 自動配文獻失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const newText = res.data.text || '';
+    state.chapters[chapterKey] = newText;
+    if (state.currentChapter === chapterKey) {
+      const editor = getCurrentEditor();
+      if (editor) editor.value = newText;
+    }
+    updateWordCounts();
+    scheduleSaveState();
+    appendChatAI('已根據 referencePool 自動配文獻，請人工檢查 APA 格式與內容。');
   }
 
-  // --------- 其他功能（保留介面，不改動文字；內文可在 code.gs 擴充） ----------
-
-  function runManuscriptFitCheck() {
-    alert('期刊適配檢查：請在後端實作實際規則與檢查邏輯。');
-  }
-
-  function runQualityCheck() {
-    alert('品質＆倫理檢查：請在後端實作研究倫理與寫作品質檢查。');
-  }
-
-  function updateResearchDesign() {
-    // 目前僅作佔位，實際可在後端或此處進一步實作
-  }
-
-  function addRQ() {
-    const list = document.getElementById('rq-list');
-    if (!list) return;
-    const idx = list.children.length + 1;
-    const div = document.createElement('div');
-    div.className = 'flex items-start gap-1';
-    div.innerHTML = `
-      <span class="mt-0.5 text-slate-400">RQ${idx}.</span>
-      <textarea class="flex-1 border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
-        placeholder="撰寫研究問題"></textarea>
-    `;
-    list.appendChild(div);
-  }
-
-  function addHypothesis() {
-    const list = document.getElementById('hypo-list');
-    if (!list) return;
-    const idx = list.children.length + 1;
-    const div = document.createElement('div');
-    div.className = 'flex items-start gap-1';
-    div.innerHTML = `
-      <span class="mt-0.5 text-slate-400">H${idx}.</span>
-      <textarea class="flex-1 border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
-        placeholder="撰寫研究假設"></textarea>
-    `;
-    list.appendChild(div);
-  }
-
-  function generateMethodDraft() {
-    alert('生成方法草稿功能可與後端 AI 整合，前端已保留按鈕與函式介面。');
-  }
-
-  function updateDataMeta() {
-    // 可視需要擴充
-  }
-
-  function generateResultsDraft() {
-    alert('生成結果草稿功能可與後端 AI 整合，前端已保留按鈕與函式介面。');
-  }
-
-  function generateChapterDraft() {
-    alert('生成本章草稿功能可與後端 AI 整合，前端已保留按鈕與函式介面。');
-  }
-
-  function runReviewerMode() {
-    alert('Reviewer 模式可在後端實作實際評論與建議，前端已保留觸發點。');
-  }
-
-  function sendAIMessage() {
+  async function sendAIMessage() {
     const input = document.getElementById('ai-input');
-    const panel = document.getElementById('chat-panel');
-    if (!input || !panel) return;
-    const text = input.value.trim();
+    const text = (input.value || '').trim();
     if (!text) {
       alert('請輸入指令，或直接使用「生成本章草稿」按鈕。');
       return;
     }
-    const div = document.createElement('div');
-    div.className = 'bg-white border border-slate-200 rounded px-2 py-1 text-[11px]';
-    div.textContent = '指令已送出（實際 AI 回應請在後端實作）：' + text;
-    panel.appendChild(div);
-    panel.scrollTop = panel.scrollHeight;
+    appendChatUser(text);
     input.value = '';
+
+    const chapterKey = state.currentChapter;
+    const payload = {
+      projectId: state.projectId,
+      lang: state.lang,
+      stylePreset: state.stylePreset,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      rqs: state.rqs,
+      hypotheses: state.hypotheses,
+      analysisPlan: state.analysisPlan,
+      chapterKey,
+      chapterText: state.chapters[chapterKey] || '',
+      userInstruction: text
+    };
+    const res = await callBackend('/chapterChat', payload);
+    if (!res.ok) {
+      appendChatSystem('AI 回應失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    appendChatAI(res.data.reply || '[後端尚未實作 chapterChat 回應。]');
   }
 
-  // --------- 小工具 ----------
+  /**********************
+   * 快照 / 版本管理     *
+   **********************/
 
-  function escapeHtml(str) {
-    return (str || '').replace(/[&<>"']/g, function(m) {
-      return ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      })[m];
+  function createSnapshot() {
+    const ts = new Date();
+    const id = 'snap-' + ts.getTime();
+    const label = ts.toLocaleString('zh-TW');
+    const snapshot = {
+      id,
+      label,
+      createdAt: ts.toISOString(),
+      chapters: Object.assign({}, state.chapters)
+    };
+    state.snapshots.unshift(snapshot);
+    if (state.snapshots.length > 20) {
+      state.snapshots.pop();
+    }
+    renderSnapshotList();
+    scheduleSaveState();
+    appendChatSystem('已儲存目前全文內容為快照：' + label);
+  }
+
+  function renderSnapshotList() {
+    const box = document.getElementById('snapshot-list');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!state.snapshots.length) {
+      box.innerHTML = '<p class="text-[10px] text-slate-400">尚未建立任何快照。</p>';
+      return;
+    }
+    state.snapshots.forEach(snap => {
+      const div = document.createElement('div');
+      div.className = 'flex items-center justify-between';
+      div.innerHTML = `
+        <span class="truncate">${escapeHtml(snap.label)}</span>
+        <button class="text-[10px] text-indigo-600 hover:underline ml-2"
+                onclick="restoreSnapshot('${snap.id}')">
+          載入
+        </button>
+      `;
+      box.appendChild(div);
     });
   }
+
+  function restoreSnapshot(id) {
+    const snap = state.snapshots.find(s => s.id === id);
+    if (!snap) return;
+    if (!confirm('確定要以此快照覆蓋目前全文內容？此動作無法還原。')) return;
+    state.chapters = Object.assign({}, snap.chapters);
+    const editor = getCurrentEditor();
+    if (editor) {
+      editor.value = state.chapters[state.currentChapter] || '';
+    }
+    updateWordCounts();
+    scheduleSaveState();
+    appendChatSystem('已載入快照：' + snap.label);
+  }
+
+  /**********************
+   * 期刊適配 / 品質檢查 *
+   **********************/
+
+  async function runManuscriptFitCheck() {
+    const payload = {
+      projectId: state.projectId,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      rqs: state.rqs,
+      hypotheses: state.hypotheses,
+      analysisPlan: state.analysisPlan,
+      journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null,
+      chapters: state.chapters
+    };
+    const res = await callBackend('/fitCheck', payload);
+    if (!res.ok) {
+      alert('期刊適配檢查失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const msg = res.data.summary || '已送出期刊適配檢查，請在後端實作詳細規則。';
+    alert(msg);
+  }
+
+  async function runQualityCheck() {
+    const payload = {
+      projectId: state.projectId,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      chapters: state.chapters,
+      lang: state.lang
+    };
+    const res = await callBackend('/qualityCheck', payload);
+    if (!res.ok) {
+      alert('品質＆倫理檢查失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const msg = res.data.summary || '已送出品質＆倫理檢查，請在後端實作詳細規則。';
+    alert(msg);
+  }
+
+  async function generateMethodDraft() {
+    const existing = state.chapters.method || '';
+    const payload = {
+      projectId: state.projectId,
+      lang: state.lang,
+      stylePreset: state.stylePreset,
+      projectMeta: state.projectMeta,
+      design: state.design,
+      rqs: state.rqs,
+      hypotheses: state.hypotheses,
+      analysisPlan: state.analysisPlan,
+      chapterKey: 'method',
+      chapterText: existing
+    };
+    appendChatSystem('[Method] 正在呼叫後端生成方法章節草稿…');
+    const res = await callBackend('/methodDraft', payload);
+    if (!res.ok) {
+      appendChatSystem('方法章節草稿生成失敗：' + (res.error || '未知錯誤'));
+      alert('方法章節草稿生成失敗：' + (res.error || '未知錯誤'));
+      return;
+    }
+    const text = res.data.text || '';
+    state.chapters.method = text;
+    if (state.currentChapter === 'method') {
+      const editor = getCurrentEditor();
+      if (editor) editor.value = text;
+    }
+    updateWordCounts();
+    scheduleSaveState();
+    appendChatAI('方法章節草稿已更新於編輯區。');
+  }
+
 </script>
 
 </body>
