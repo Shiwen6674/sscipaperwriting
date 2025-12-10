@@ -575,8 +575,8 @@
    **********************/
   const BACKEND_CONFIG = {
     // 實際使用時請改成你的 Apps Script 或其他後端 Web API URL
-    API_BASE_URL: '', // 例如："https://script.google.com/macros/s/XXX/exec"
-    USE_MOCK: true    // 開發階段用 mock；要打真後端時改成 false 並設定 API_BASE_URL
+    API_BASE_URL: 'https://script.google.com/macros/s/AKfycbxzuSB40CJ_8VgEG5HsZR0QBqShK5TMKQAHHkQf_ww4gGy90uWZUoLjiuwbBpT4BkJoKQ/exec', // 例如："https://script.google.com/macros/s/XXX/exec"
+    USE_MOCK: false    // 開發階段用 mock；要打真後端時改成 false 並設定 API_BASE_URL
   };
 
   async function callBackend(endpoint, payload) {
