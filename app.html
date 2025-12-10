@@ -1781,7 +1781,7 @@
       chapterKey,
       chapterText: existing
     };
-    const res = await callBackend('/resultsDraft', payload);
+    cconst res = await callBackend('generate_results', payload);
     if (!res.ok) {
       appendChatSystem('[結果草稿] 生成失敗：' + (res.error || '未知錯誤'));
       alert('生成結果草稿失敗：' + (res.error || '未知錯誤'));
@@ -1913,7 +1913,7 @@
       chapterKey,
       chapterText: existing
     };
-    const res = await callBackend('/generateChapter', payload);
+    const res = await callBackend('generate_content', payload);
     if (!res.ok) {
       appendChatSystem('生成本章草稿失敗：' + (res.error || '未知錯誤'));
       alert('生成本章草稿失敗：' + (res.error || '未知錯誤'));
@@ -1951,7 +1951,7 @@
       chapterKey,
       chapterText: text
     };
-    const res = await callBackend('/reviewChapter', payload);
+    const res = await callBackend('review_chapter', payload);
     if (!res.ok) {
       appendChatSystem('Reviewer 模式失敗：' + (res.error || '未知錯誤'));
       alert('Reviewer 模式失敗：' + (res.error || '未知錯誤'));
@@ -1984,7 +1984,7 @@
       chapterText: text,
       referencePool: state.referencePool
     };
-    const res = await callBackend('/autoCiteChapter', payload);
+   const res = await callBackend('autoCiteChapter', payload);
     if (!res.ok) {
       appendChatSystem('AI 自動配文獻失敗：' + (res.error || '未知錯誤'));
       alert('AI 自動配文獻失敗：' + (res.error || '未知錯誤'));
@@ -2025,7 +2025,8 @@
       chapterText: state.chapters[chapterKey] || '',
       userInstruction: text
     };
-    const res = await callBackend('/chapterChat', payload);
+    // 原本是 '/chapterChat'
+const res = await callBackend('assistant_chat', payload);
     if (!res.ok) {
       appendChatSystem('AI 回應失敗：' + (res.error || '未知錯誤'));
       return;
@@ -2107,7 +2108,7 @@
       journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null,
       chapters: state.chapters
     };
-    const res = await callBackend('/fitCheck', payload);
+    const res = await callBackend('fitCheck', payload);
     if (!res.ok) {
       alert('期刊適配檢查失敗：' + (res.error || '未知錯誤'));
       return;
@@ -2124,7 +2125,7 @@
       chapters: state.chapters,
       lang: state.lang
     };
-    const res = await callBackend('/qualityCheck', payload);
+    const res = await callBackend('qualityCheck', payload);
     if (!res.ok) {
       alert('品質＆倫理檢查失敗：' + (res.error || '未知錯誤'));
       return;
@@ -2148,7 +2149,7 @@
       chapterText: existing
     };
     appendChatSystem('[Method] 正在呼叫後端生成方法章節草稿…');
-    const res = await callBackend('/methodDraft', payload);
+    const res = await callBackend('generate_method', payload);
     if (!res.ok) {
       appendChatSystem('方法章節草稿生成失敗：' + (res.error || '未知錯誤'));
       alert('方法章節草稿生成失敗：' + (res.error || '未知錯誤'));
