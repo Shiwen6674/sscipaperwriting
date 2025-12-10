@@ -757,10 +757,27 @@
     if (totalSpan) totalSpan.textContent = '全文字數：' + total;
   }
 
+  // 「字數」計算：英文以空白分詞，中文以字數計（只計算 CJK 字）
   function countWords(text) {
     if (!text) return 0;
-    const tokens = text.trim().split(/\s+/).filter(Boolean);
-    return tokens.length;
+    const trimmed = text.trim();
+    if (!trimmed) return 0;
+
+    const rawTokens = trimmed.split(/\s+/).filter(Boolean);
+    let count = 0;
+
+    rawTokens.forEach(tok => {
+      const cjkMatches = tok.match(/[\u4e00-\u9fff]/g);
+      if (cjkMatches && cjkMatches.length > 0) {
+        // 只計算 CJK 字元數，忽略其中的標點與拉丁字
+        count += cjkMatches.length;
+      } else {
+        // 非 CJK token 視為一個 word
+        count += 1;
+      }
+    });
+
+    return count;
   }
 
   // --------- 專案 / 期刊 ----------
@@ -829,14 +846,50 @@
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet);
 
-      state.referencePool = rows.map((row, idx) => ({
-        id: 'ref-' + (idx + 1),
-        authors: (row.Author || row.Authors || row['Authors'] || '').toString().trim(),
-        year: (row.Year || row.PY || '').toString().trim(),
-        title: (row.Title || row['Article Title'] || row['Document Title'] || '').toString().trim(),
-        journal: (row.Journal || row['Source Title'] || row['Journal Name'] || '').toString().trim(),
-        doi: (row.DOI || row.Doi || row['DOI'] || '').toString().trim()
-      }));
+      state.referencePool = rows.map((row, idx) => {
+        const authorsRaw =
+          row.Author ||
+          row.Authors ||
+          row['Authors'] ||
+          row.AU ||
+          row['AU'] ||
+          '';
+        const yearRaw =
+          row.Year ||
+          row.PY ||
+          row['PY'] ||
+          '';
+        const titleRaw =
+          row.Title ||
+          row['Article Title'] ||
+          row['Document Title'] ||
+          row.TI ||
+          row['TI'] ||
+          '';
+        const journalRaw =
+          row.Journal ||
+          row['Source Title'] ||
+          row['Journal Name'] ||
+          row.SO ||
+          row['SO'] ||
+          '';
+        const doiRaw =
+          row.DOI ||
+          row.Doi ||
+          row['DOI'] ||
+          row.DI ||
+          row['DI'] ||
+          '';
+
+        return {
+          id: 'ref-' + (idx + 1),
+          authors: authorsRaw.toString().trim(),
+          year: yearRaw.toString().trim(),
+          title: titleRaw.toString().trim(),
+          journal: journalRaw.toString().trim(),
+          doi: doiRaw.toString().trim()
+        };
+      });
 
       const litCount = document.getElementById('lit-count');
       if (litCount) litCount.textContent = state.referencePool.length;
@@ -925,10 +978,26 @@
       return;
     }
 
-    // 簡化：取第一位作者姓氏＋年份，APA 形式 (Author, Year)
-    const firstAuthor = (ref.authors || '').split(/[;,]/)[0] || ref.authors || '';
-    const authorSurname = firstAuthor.split(/\s+/).filter(Boolean)[0] || firstAuthor;
-    const year = ref.year || 'n.d.';
+    // 取第一位作者姓氏＋年份，APA 形式 (Author, Year)
+    let firstAuthorRaw = (ref.authors || '').split(/[;&|]/)[0] || ref.authors || '';
+    firstAuthorRaw = firstAuthorRaw.trim();
+
+    let authorSurname = firstAuthorRaw;
+    if (firstAuthorRaw.includes(',')) {
+      // 常見格式：Surname, Initials
+      authorSurname = firstAuthorRaw.split(',')[0].trim();
+    } else {
+      // 常見格式：Initials Surname 或 Surname Initials
+      const parts = firstAuthorRaw.split(/\s+/).filter(Boolean);
+      if (parts.length > 1) {
+        authorSurname = parts[parts.length - 1];
+      }
+    }
+
+    const yearStr = (ref.year || '').toString();
+    const yearMatch = yearStr.match(/\d{4}[a-z]?/i);
+    const year = yearMatch ? yearMatch[0] : (yearStr || 'n.d.');
+
     const citationText = `(${authorSurname}, ${year})`;
 
     const start = editor.selectionStart ?? editor.value.length;
@@ -1040,10 +1109,19 @@
   }
 
   function findRefByAuthorYear(author, year) {
-    const targetLast = normalizeName(author.split(/[,\s]/)[0] || author);
+    const targetLast = normalizeName((author.split(/[,\s]/)[0] || author));
     return state.referencePool.find(ref => {
-      const firstAuthor = (ref.authors || '').split(/[;,]/)[0] || ref.authors || '';
-      const refLast = normalizeName(firstAuthor.split(/[,\s]/)[0] || firstAuthor);
+      const firstAuthor = (ref.authors || '').split(/[;&]/)[0] || ref.authors || '';
+      let refSurname = firstAuthor.trim();
+      if (refSurname.includes(',')) {
+        refSurname = refSurname.split(',')[0].trim();
+      } else {
+        const parts = refSurname.split(/\s+/).filter(Boolean);
+        if (parts.length > 1) {
+          refSurname = parts[parts.length - 1];
+        }
+      }
+      const refLast = normalizeName(refSurname);
       const refYear = (ref.year || '').toString();
       return refLast && refLast === targetLast && (!year || refYear.startsWith(year));
     }) || null;
@@ -1051,10 +1129,14 @@
 
   function formatReferenceAPA(ref) {
     const authors = ref.authors || '';
-    const year = ref.year || 'n.d.';
+    const yearStr = (ref.year || '').toString();
+    const yearMatch = yearStr.match(/\d{4}[a-z]?/i);
+    const year = yearMatch ? yearMatch[0] : (yearStr || 'n.d.');
     const title = ref.title || '';
     const journal = ref.journal || '';
-    const doi = ref.doi ? 'https://doi.org/' + ref.doi.replace(/^https?:\/\/(doi\.org\/)?/i, '') : '';
+    const doi = ref.doi
+      ? 'https://doi.org/' + ref.doi.replace(/^https?:\/\/(doi\.org\/)?/i, '').trim()
+      : '';
     let line = `${authors} (${year}). ${title}. ${journal}.`;
     if (doi) line += ' ' + doi;
     return line;
