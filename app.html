@@ -855,11 +855,11 @@
     const options = [
       { value: 'zh-TW', label: '繁體中文' },
       { value: 'en', label: 'English' },
-      { value: 'ja', label: '日本語' }, // 新增
-      { value: 'zh-CN', label: '簡體中文' }, // 新增
-      { value: 'vi', label: '越語' }, // 新增
-      { value: 'id', label: '印尼語' }, // 新增
-      { value: 'th', label: '泰語' } // 新增
+      { value: 'ja', label: '日本語' },
+      { value: 'zh-CN', label: '簡體中文' },
+      { value: 'vi', label: '越語' },
+      { value: 'id', label: '印尼語' },
+      { value: 'th', label: '泰語' }
     ];
     sel.innerHTML = '';
     options.forEach(opt => {
@@ -869,10 +869,20 @@
       sel.appendChild(o);
     });
     sel.value = state.lang || 'zh-TW';
+    // ******************************************************
+    // 這裡實現了語言選單與 state.lang 的連動和保存。
+    // 由於不能變動不相關程式，全頁文字的翻譯 (如標題/按鈕文字) 需額外實作，
+    // 這裡僅示範 label 的模擬連動和 state 的更新。
+    // ******************************************************
     sel.addEventListener('change', () => {
       state.lang = sel.value;
       if (langLabel) {
-        langLabel.textContent = sel.value === 'en' ? 'Generation Language' : '生成語言'; // 模擬連動
+        // 根據語言切換 '生成語言' 標籤 (僅模擬切換，實現全頁翻譯需更多靜態資源)
+        langLabel.textContent = 
+            state.lang === 'en' ? 'Gen. Language' : 
+            state.lang === 'ja' ? '生成言語' : 
+            state.lang === 'zh-CN' ? '生成语言' : 
+            '生成語言';
       }
       scheduleSaveState();
     });
@@ -887,12 +897,37 @@
     placeholder.textContent = '請選擇目標期刊';
     sel.appendChild(placeholder);
 
-    Object.entries(state.journalProfiles || {}).forEach(([key, jp]) => {
-      const o = document.createElement('option');
-      o.value = key;
-      o.textContent = `${jp.name} (${jp.abbr})`;
-      sel.appendChild(o);
+    // 分組顯示
+    const groupedJournals = {
+      'Science & Mathematics Education': [],
+      'General Education & Policy': [],
+      'Educational Psychology & Measurement': [],
+      'Educational Technology & Higher Education': [],
+      'Teacher, Special, Diverse Education': []
+    };
+    Object.entries(state.journalProfiles).forEach(([key, jp]) => {
+      if (jp.category && groupedJournals[jp.category]) {
+        groupedJournals[jp.category].push({ key, jp });
+      } else {
+        // 預設分類
+        groupedJournals['General Education & Policy'].push({ key, jp });
+      }
     });
+
+    Object.entries(groupedJournals).forEach(([category, journals]) => {
+      if (journals.length > 0) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = `--- ${category} ---`;
+        journals.forEach(({ key, jp }) => {
+          const o = document.createElement('option');
+          o.value = key;
+          o.textContent = `${jp.name} (${jp.abbr})`;
+          optgroup.appendChild(o);
+        });
+        sel.appendChild(optgroup);
+      }
+    });
+
 
     if (state.projectMeta.journalKey) {
       sel.value = state.projectMeta.journalKey;
@@ -1033,58 +1068,99 @@
    * 專案與期刊設定     *
    **********************/
 
-  // 擴充 journalProfiles
-  state.journalProfiles = {
-    taper: {
-      name: 'Asia-Pacific Education Researcher',
-      abbr: 'TAPER',
-      scope: 'Education · Asia-Pacific · empirical and theoretical studies',
-      wordLimit: '約 8,000–10,000 英文字',
-      style: 'APA 7th edition',
-      note: '偏向實證研究與區域性教育議題。'
-    },
-    se: {
-      name: 'Science Education',
-      abbr: 'SciEd',
-      scope: 'Science education · conceptual and empirical research',
-      wordLimit: '約 10,000 英文字以內',
-      style: 'APA 7th edition',
-      note: '高度理論整合與方法論嚴謹度要求。'
-    },
-    li: { // 新增 SSCI 範例 1
-      name: 'Learning and Instruction',
-      abbr: 'L&I',
-      scope: 'Learning, teaching, instructional design, cognitive science',
-      wordLimit: '約 9,000 英文字以內',
-      style: 'APA 7th edition',
-      note: '注重學習理論、教學實驗與應用心理學。'
-    },
-    ce: { // 新增 SSCI 範例 2
-      name: 'Computers & Education',
-      abbr: 'C&E',
-      scope: 'Technology integration, AI in education, learning analytics',
-      wordLimit: '約 8,000 英文字以內',
-      style: 'APA 7th edition',
-      note: '聚焦技術融入教學，尤其對 AI 應用有較高興趣。'
-    },
-    jer: { // 新增 TSSCI 範例 1
-      name: '教育研究集刊',
-      abbr: 'JES',
-      scope: '教育學術研究，涵蓋各類教育議題',
-      wordLimit: '約 2 萬字（中文）',
-      style: 'APA 7th edition (中文轉寫)',
-      note: '國內教育學界頂尖中文期刊，對理論深度與實務意涵要求高。'
-    },
-    jsera: { // 新增 TSSCI 範例 2
-      name: '中華民國教育學會學術論文集',
-      abbr: 'JSERA',
-      scope: '教育政策、哲學、社會學、心理學等',
-      wordLimit: '約 1.5 萬字（中文）',
-      style: '各子刊規定',
-      note: '中文教育類核心期刊，接受多元研究取向。'
-    }
-  };
+  // 擴充 journalProfiles: 包含 61 本期刊的完整列表
+  state.journalProfiles = mapJournalData();
 
+
+  function mapJournalData() {
+    // 您的期刊列表數據，以方便轉換的格式儲存
+    const journalList = [
+      { id: 'se', name: 'Science Education', abbr: 'SciEd', category: 'Science & Mathematics Education', scope: '總體科學教育，所有層級的理論與實證研究。', wordLimit: '7,500 - 10,000 字', note: '理論性貢獻、廣泛影響力、批判性分析。' },
+      { id: 'jrst', name: 'Journal of Research in Science Teaching', abbr: 'JRST', category: 'Science & Mathematics Education', scope: '科學教學與學習的原創實證研究、方法學嚴謹性。', wordLimit: '7,000 - 8,000 字', note: '嚴謹的方法論、對實踐和理論的具體貢獻。' },
+      { id: 'ijse', name: 'International Journal of Science Education', abbr: 'IJSE', category: 'Science & Mathematics Education', scope: '國際視野下的科學教學與學習，鼓勵跨文化研究。', wordLimit: '7,000 - 8,000 字', note: '國際比較與情境化、研究結果應用性。' },
+      { id: 'rise', name: 'Research in Science Education', abbr: 'RISE', category: 'Science & Mathematics Education', scope: '澳洲/亞太地區科學教育研究，涵蓋所有科學學科。', wordLimit: '8,000 字以內', note: '澳洲與亞太視角、實證性、跨學科議題、課程改革。' },
+      { id: 'sise', name: 'Studies in Science Education', abbr: 'SISE', category: 'Science & Mathematics Education', scope: '對特定科學教育研究領域的批判性文獻回顧或理論建構。', wordLimit: '約 10,000 字', note: '文獻綜合與批判、理論建構 (不接受原始實證)。' },
+      { id: 'jset', name: 'J Sci Edu Technol', abbr: 'JSET', category: 'Science & Mathematics Education', scope: '科學教育中的技術應用、教學干預與評估。', wordLimit: '6,000 - 8,000 字', note: '科技整合、實證數據、創新教學設計。' },
+      { id: 'ijsme', name: 'IJSME', abbr: 'IJSME', category: 'Science & Mathematics Education', scope: '數學與科學教育的綜合研究，著重教學實踐。', wordLimit: '7,000 - 9,000 字', note: '跨學科整合 (STEM)、教學實踐與學習成效。' },
+      { id: 'jrme', name: 'Journal for Research in Mathematics Education', abbr: 'JRME', category: 'Science & Mathematics Education', scope: '數學教育領域最頂尖的理論與實證研究。', wordLimit: '8,000 - 10,000 字', note: '深度理論探討、數學教育認知與教學法創新。' },
+      { id: 'cie', name: 'Cultural Studies of Science Education', abbr: 'CSSE', category: 'Science & Mathematics Education', scope: '運用文化研究視角探討科學教育的社會、政治與文化面向。', wordLimit: '8,000 - 10,000 字', note: '社會文化、批判性理論、科學教育的公平性。' },
+      { id: 'bse', name: 'Baltic Science Education', abbr: 'BSE', category: 'Science & Mathematics Education', scope: '波羅的海國家科學教育研究，專注科學、數學、技術教育。', wordLimit: '6,000 - 8,000 字', note: '波羅的海/東歐情境、實踐性、教育科技應用。' },
+      { id: 'ejmste', name: 'Eurasia J of Math, Science and Tech Edu', abbr: 'EJMSTE', category: 'Science & Mathematics Education', scope: '數學、科學與技術教育的實踐與研究，國際性。', wordLimit: '6,000 - 8,000 字', note: '亞洲與歐洲的 STEM 教育研究、實證數據。' },
+      { id: 'eer', name: 'Environmental Education Research', abbr: 'EER', category: 'Science & Mathematics Education', scope: '環境教育與永續發展教育的研究，與科學教育高度相關。', wordLimit: '7,000 - 9,000 字', note: '環境議題、教育政策與跨學科教學。' },
+
+      { id: 'rer', name: 'Review of Educational Research', abbr: 'RER', category: 'General Education & Policy', scope: '教育領域的系統性、批判性文獻回顧或整合分析。', wordLimit: '10,000 - 15,000 字+', note: '頂尖文獻綜合、高影響力結論、理論建構。' },
+      { id: 'aerj', name: 'American Educational Research Journal', abbr: 'AERJ', category: 'General Education & Policy', scope: '教育領域最高品質的原創實證研究（量化、質化、混合）。', wordLimit: '8,000 - 10,000 字', note: '最高標準的方法學嚴謹性、理論與實踐重大貢獻。' },
+      { id: 'er', name: 'Educational Researcher', abbr: 'ER', category: 'General Education & Policy', scope: '廣泛教育議題的評論、政策、方法論文章與簡報。', wordLimit: '4,000 - 8,000 字 (依類型)', note: '時效性與政策相關性、對學術界影響廣泛。' },
+      { id: 'aje', name: 'American Journal of Education', abbr: 'AJE', category: 'General Education & Policy', scope: '著重教育的歷史、社會學、政治學視角與社會正義。', wordLimit: '8,000 - 10,000 字', note: '批判性分析、歷史與文化情境化、社會公平。' },
+      { id: 'berj', name: 'British Educational Research Journal', abbr: 'BERJ', category: 'General Education & Policy', scope: '英國教育研究協會刊物，國際性綜合教育研究。', wordLimit: '7,000 - 9,000 字', note: '國際化、涵蓋課程、政策、心理學等多領域。' },
+      { id: 'eepa', name: 'Educational Evaluation and Policy Analysis', abbr: 'EEPA', category: 'General Education & Policy', scope: '教育政策的制定、執行、評估與問責制研究。', wordLimit: '7,000 - 9,000 字', note: '政策分析、大規模數據、嚴謹的量化方法。' },
+      { id: 'ep', name: 'Educational Policy', abbr: 'EP', category: 'General Education & Policy', scope: '專注於教育政策的影響、改革、政治學分析。', wordLimit: '8,000 - 10,000 字', note: '政策理論、國際比較、宏觀層面分析。' },
+      { id: 'cer', name: 'Comparative Education Review', abbr: 'CER', category: 'General Education & Policy', scope: '比較教育與國際教育發展議題研究。', wordLimit: '7,000 - 9,000 字', note: '跨國比較、全球教育趨勢、發展中國家教育。' },
+      { id: 'ci', name: 'Curriculum Inquiry', abbr: 'CI', category: 'General Education & Policy', scope: '課程理論、課程社會學與哲學探討。', wordLimit: '8,000 - 10,000 字', note: '理論性與哲學探討、課程設計的批判性研究。' },
+      { id: 'jcs', name: 'Journal of Curriculum Studies', abbr: 'JCS', category: 'General Education & Policy', scope: '國際性課程研究，涵蓋課程的理論與實踐。', wordLimit: '7,000 - 8,000 字', note: '課程實踐與理論的結合、國際課程比較。' },
+      { id: 'tcr', name: 'Teachers College Record', abbr: 'TCR', category: 'General Education & Policy', scope: '跨學科教育研究，涵蓋歷史、哲學、社會學、政策。', wordLimit: '8,000 - 10,000 字', note: '廣泛議題、歷史/社會背景下的教育問題。' },
+      { id: 'rre', name: 'Review of Research in Education', abbr: 'RRE', category: 'General Education & Policy', scope: '每年針對一個主題進行深入的綜合評論。', wordLimit: '10,000 - 15,000 字', note: '深度主題分析、對年度研究主題的綜合貢獻。' },
+      { id: 'emald', name: 'Educational Management Administration & Leadership', abbr: 'EMAL', category: 'General Education & Policy', scope: '學校行政、管理與領導力研究。', wordLimit: '7,000 - 8,000 字', note: '領導者角色、學校效能、管理理論應用。' },
+      { id: 'jec', name: 'Journal of Educational Change', abbr: 'JEC', category: 'General Education & Policy', scope: '專注於教育系統、機構、學校的變革與創新。', wordLimit: '7,000 - 9,000 字', note: '變革理論、教育創新實施、阻力與成功因素。' },
+      { id: 'ijed', name: 'International J of Educational Development', abbr: 'IJED', category: 'General Education & Policy', scope: '專注於發展中國家教育與國際援助的議題。', wordLimit: '7,000 - 9,000 字', note: '發展性政策、國際教育援助、教育與發展。' },
+      { id: 'err', name: 'Educational Research Review', abbr: 'ERR', category: 'General Education & Policy', scope: '高品質的教育研究文獻評論期刊 (非 RER)。', wordLimit: '8,000 - 10,000 字', note: '系統性回顧、某一研究領域的綜合分析。' },
+      { id: 'ore', name: 'Oxford Review of Education', abbr: 'ORE', category: 'General Education & Policy', scope: '英國頂尖教育評論期刊，涵蓋政策、歷史、比較教育。', wordLimit: '8,000 - 10,000 字', note: '高品質評論、對教育學術界的貢ALI獻。' },
+
+      { id: 'jep', name: 'Journal of Educational Psychology', abbr: 'JEP', category: 'Educational Psychology & Measurement', scope: '學習、記憶、動機、教學的心理學基礎。', wordLimit: '8,000 - 10,000 字', note: '實驗設計、高內部效度、嚴格的心理學實證。' },
+      { id: 'li', name: 'Learning and Instruction', abbr: 'L&I', category: 'Educational Psychology & Measurement', scope: '學習與教學過程的實證研究，強調認知與情境。', wordLimit: '7,500 - 9,000 字', note: '教學干預、學習機制的認知與情境分析。' },
+      { id: 'cep', name: 'Contemporary Educational Psychology', abbr: 'CEP', category: 'Educational Psychology & Measurement', scope: '學習、發展、動機與教學的實驗與實證研究。', wordLimit: '6,000 - 8,000 字', note: '實驗/準實驗設計、認知與動機機制。' },
+      { id: 'epst', name: 'Educational Psychologist', abbr: 'EPst', category: 'Educational Psychology & Measurement', scope: '教育心理學的理論、評論與應用。', wordLimit: '7,000 - 9,000 字', note: '理論建構、教育心理學概念的綜合與批判。' },
+      { id: 'ame', name: 'Applied Measurement in Education', abbr: 'AME', category: 'Educational Psychology & Measurement', scope: '教育測量與評估的應用研究，心理計量學。', wordLimit: '7,000 - 9,000 字', note: '測量理論、IRT、教育評估工具的開發與應用。' },
+      { id: 'epm', name: 'Educational and Psychological Measurement', abbr: 'EPM', category: 'Educational Psychology & Measurement', scope: '專注於教育與心理測量的方法學與理論。', wordLimit: '8,000 - 10,000 字', note: '心理計量學理論與發展、測量工具的嚴謹度。' },
+      { id: 'jee', name: 'Journal of Experimental Education', abbr: 'JEE', category: 'Educational Psychology & Measurement', scope: '實驗設計和教育評估方法，強調因果推論。', wordLimit: '7,000 - 9,000 字', note: '嚴格的實驗設計、量化方法學。' },
+      { id: 'cije', name: 'Cognition and Instruction', abbr: 'C&I', category: 'Educational Psychology & Measurement', scope: '學習、認知與教學的交集，強調高階思維。', wordLimit: '8,000 - 10,000 字', note: '複雜認知過程、教學設計與認知負荷。' },
+      { id: 'dp', name: 'Developmental Psychology', abbr: 'DP', category: 'Educational Psychology & Measurement', scope: '發展心理學研究，包括兒童在教育情境下的發展。', wordLimit: '8,000 - 10,000 字', note: '兒童與青少年發展、長期縱向研究。' },
+      { id: 'esj', name: 'The Elementary School Journal', abbr: 'ESJ', category: 'Educational Psychology & Measurement', scope: '專注於 K-8 階段的課程、教學、教育心理學。', wordLimit: '7,000 - 9,000 字', note: '小學到初中教育、實證研究、政策相關性。' },
+
+      { id: 'etrd', name: 'Educational Technology Research and Development', abbr: 'ETR&D', category: 'Educational Technology & Higher Education', scope: '教學設計、教育科技的發展、實施和評估。', wordLimit: '6,000 - 8,000 字', note: '設計與發展 (D&D) 研究、教學系統設計。' },
+      { id: 'ce', name: 'Computers & Education', abbr: 'C&E', category: 'Educational Technology & Higher Education', scope: '電腦與數位工具在各級教育中的應用與影響。', wordLimit: '7,500 - 9,000 字', note: '技術效用、嚴謹的實證數據、對教學實踐的啟示。' },
+      { id: 'bjet', name: 'British Journal of Educational Technology', abbr: 'BJET', category: 'Educational Technology & Higher Education', scope: '教育科技的理論、實踐與設計，英國或國際性視野。', wordLimit: '6,000 - 8,000 字', note: '科技整合理論、教育技術的創新設計。' },
+      { id: 'ihe', name: 'The Internet and Higher Education', abbr: 'IHE', category: 'Educational Technology & Higher Education', scope: '網路與數位技術在高等教育中的應用和影響。', wordLimit: '7,000 - 8,000 字', note: '高等教育科技、線上學習、數位校園。' },
+      { id: 'ile', name: 'Interactive Learning Environments', abbr: 'ILE', category: 'Educational Technology & Higher Education', scope: '互動學習環境的設計、技術與評估。', wordLimit: '7,000 - 9,000 字', note: 'AR/VR/沉浸式技術、人機互動與學習成效。' },
+      { id: 'rhe', name: 'The Review of Higher Education', abbr: 'RHE', category: 'Educational Technology & Higher Education', scope: '高等教育的理論、研究與政策。', wordLimit: '8,000 - 10,000 字', note: '高等教育政策、行政管理、學生發展。' },
+      { id: 'he', name: 'Higher Education', abbr: 'HE', category: 'Educational Technology & Higher Education', scope: '國際化的高等教育研究，涵蓋全球趨勢。', wordLimit: '7,000 - 9,000 字', note: '國際比較、高等教育系統分析、跨國合作。' },
+      { id: 'jhe', name: 'Journal of Higher Education', abbr: 'JHE', category: 'Educational Technology & Higher Education', scope: '高等教育的機構、領導、財務與政策研究。', wordLimit: '8,000 - 10,000 字', note: '領導力與治理、高等教育的社會學分析。' },
+      { id: 'alhe', name: 'Active Learning in Higher Education', abbr: 'ALHE', category: 'Educational Technology & Higher Education', scope: '專注於高等教育中的主動學習教學法與策略。', wordLimit: '6,000 - 8,000 字', note: '教學創新、學生參與、課程設計的實證研究。' },
+      { id: 'jcal', name: 'Journal of Computer Assisted Learning', abbr: 'JCAL', category: 'Educational Technology & Higher Education', scope: '運用電腦輔助學習的實證研究，側重學習成效。', wordLimit: '7,000 - 9,000 字', note: '輔助學習機制、技術干預與認知負荷。' },
+      { id: 'tihe', name: 'Teaching in Higher Education', abbr: 'TiHE', category: 'Educational Technology & Higher Education', scope: '高等教育中的教學實踐、課程與評估。', wordLimit: '6,000 - 8,000 字', note: '高等教育教學法、教師專業發展、教學創新。' },
+
+      { id: 'tte', name: 'Teaching and Teacher Education', abbr: 'TTE', category: 'Teacher, Special, Diverse Education', scope: '教師的職前與在職教育、專業發展研究。', wordLimit: '7,000 - 8,000 字', note: '教師知能、專業發展模式、教師生命週期。' },
+      { id: 'jte', name: 'Journal of Teacher Education', abbr: 'JTE', category: 'Teacher, Special, Diverse Education', scope: '教師教育的理論、政策與實踐。', wordLimit: '8,000 - 10,000 字', note: '教師教育課程設計、教育公平、政策影響。' },
+      { id: 'ec', name: 'Exceptional Children', abbr: 'EC', category: 'Teacher, Special, Diverse Education', scope: '特殊教育與身心障礙兒童教育的原創實證研究。', wordLimit: '7,000 - 9,000 字', note: '干預與評估、對特殊教育實踐有直接影響。' },
+      { id: 'jld', name: 'Journal of Learning Disabilities', abbr: 'JLD', category: 'Teacher, Special, Diverse Education', wordLimit: '7,000 - 9,000 字', scope: '學習障礙的識別、評估與干預研究。', note: '診斷工具、有效教學策略、神經學基礎。' },
+      { id: 'gcq', name: 'Gifted Child Quarterly', abbr: 'GCQ', category: 'Teacher, Special, Diverse Education', scope: '資優教育的理論、研究與實踐。', wordLimit: '6,000 - 8,000 字', note: '資優生鑑定、資優課程設計與社會情感發展。' },
+      { id: 'ijie', name: 'International Journal of Inclusive Education', abbr: 'IJIE', category: 'Teacher, Special, Diverse Education', scope: '融合教育的理論、政策與實踐。', wordLimit: '7,000 - 9,000 字', note: '融合教育模式、教育公平、多元文化教育。' },
+      { id: 'aeq', name: 'Adult Education Quarterly', abbr: 'AEQ', category: 'Teacher, Special, Diverse Education', scope: '成人教育與終身學習研究。', wordLimit: '7,000 - 9,000 字', note: '成人學習理論、非正規教育、繼續教育。' },
+      { id: 'jrce', name: 'Journal of Research in Childhood Education', abbr: 'JRCE', category: 'Teacher, Special, Diverse Education', scope: '專注於幼兒教育、早期學習與發展。', wordLimit: '6,000 - 8,000 字', note: '學前與幼兒教育、社會情感發展。' },
+      { id: 'ted', name: 'Teaching Education', abbr: 'T Ed', category: 'Teacher, Special, Diverse Education', scope: '專注於教師教育的實踐與反思。', wordLimit: '7,000 - 8,000 字', note: '實踐社區、師資培訓模式、教師身份認同。' },
+      { id: 'jle', name: 'Journal of Latinos and Education', abbr: 'JLE', category: 'Teacher, Special, Diverse Education', scope: '專注於拉丁裔學生的教育議題、公平與文化。', wordLimit: '7,000 - 9,000 字', note: '種族、文化與教育公平、多元文化教育。' },
+      { id: 'gae', name: 'Gender and Education', abbr: 'G&E', category: 'Teacher, Special, Diverse Education', scope: '教育中的性別議題、公平與社會學分析。', wordLimit: '8,000 - 10,000 字', note: '性別理論、教育中的權力結構、女性主義教育。' },
+      // 額外加入先前存在的 TSSCI/SSCI 範例
+      { id: 'taper', name: 'Asia-Pacific Education Researcher', abbr: 'TAPER', category: 'General Education & Policy', scope: 'Education · Asia-Pacific · empirical and theoretical studies', wordLimit: '約 8,000–10,000 英文字', note: '偏向實證研究與區域性教育議題。' },
+      { id: 'jer', name: '教育研究集刊', abbr: 'JES', category: 'General Education & Policy', scope: '教育學術研究，涵蓋各類教育議題', wordLimit: '約 2 萬字（中文）', note: '國內教育學界頂尖中文期刊，對理論深度與實務意涵要求高。' },
+      { id: 'jsera', name: '中華民國教育學會學術論文集', abbr: 'JSERA', category: 'General Education & Policy', scope: '教育政策、哲學、社會學、心理學等', wordLimit: '約 1.5 萬字（中文）', note: '中文教育類核心期刊，接受多元研究取向。' }
+    ];
+
+    // 將陣列轉換為 {key: profile} 物件格式
+    return journalList.reduce((acc, curr) => {
+      acc[curr.id] = {
+        name: curr.name,
+        abbr: curr.abbr,
+        scope: curr.scope,
+        wordLimit: curr.wordLimit,
+        style: 'APA 7th edition', // 預設使用 APA 7th
+        note: curr.note,
+        category: curr.category // 用於前端分組
+      };
+      return acc;
+    }, {});
+  }
+  
   function updateProjectMeta() {
     const title = document.getElementById('project-title')?.value || '';
     const field = document.getElementById('project-field')?.value || '';
@@ -1242,7 +1318,7 @@
           <button class="text-[10px] text-rose-500 hover:underline" onclick="removeHypothesis('${h.id}')">
             刪除
           </button>
-        </div>
+          </div>
         <textarea class="w-full border border-slate-300 rounded px-1 py-0.5 text-[11px]" rows="2"
           placeholder="撰寫研究假設"
           oninput="updateHypothesisText('${h.id}', this.value)">${escapeHtml(h.text || '')}</textarea>
