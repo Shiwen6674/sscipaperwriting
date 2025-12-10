@@ -690,6 +690,316 @@
       })[m];
     });
   }
+  /**********************
+   * 多語系 UI 字典與切換 *
+   **********************/
+
+  // 主 UI 的語系字典
+  const UI_I18N = {
+    'zh-TW': {
+      langLabel: '生成語言',
+      nav: {
+        project: '1. 專案＆期刊',
+        design: '2. 研究設計',
+        literature: '3. 文獻＆引用',
+        data: '4. 數據＆分析',
+        writing: '5. 寫作＆Reviewer',
+        submission: '6. 投稿包'
+      }
+    },
+    'zh-CN': {
+      langLabel: '生成语言',
+      nav: {
+        project: '1. 项目与期刊',
+        design: '2. 研究设计',
+        literature: '3. 文献与引用',
+        data: '4. 数据与分析',
+        writing: '5. 写作与审稿人',
+        submission: '6. 投稿包'
+      }
+    },
+    'en': {
+      langLabel: 'Generation language',
+      nav: {
+        project: '1. Project & Journal',
+        design: '2. Research design',
+        literature: '3. Literature & citations',
+        data: '4. Data & analysis',
+        writing: '5. Writing & reviewer',
+        submission: '6. Submission package'
+      }
+    },
+    'ja': {
+      langLabel: '生成言語',
+      nav: {
+        project: '1. プロジェクトとジャーナル',
+        design: '2. 研究デザイン',
+        literature: '3. 文献と引用',
+        data: '4. データと分析',
+        writing: '5. 執筆と査読者',
+        submission: '6. 投稿パッケージ'
+      }
+    },
+    // 越南語：UI 文字也完整切換
+    'vi': {
+      langLabel: 'Ngôn ngữ sinh văn',
+      nav: {
+        project: '1. Dự án & tạp chí',
+        design: '2. Thiết kế nghiên cứu',
+        literature: '3. Tài liệu & trích dẫn',
+        data: '4. Dữ liệu & phân tích',
+        writing: '5. Viết bài & phản biện',
+        submission: '6. Gói gửi bài'
+      }
+    },
+    // 印尼語
+    'id': {
+      langLabel: 'Bahasa keluaran',
+      nav: {
+        project: '1. Proyek & jurnal',
+        design: '2. Desain penelitian',
+        literature: '3. Literatur & sitasi',
+        data: '4. Data & analisis',
+        writing: '5. Penulisan & reviewer',
+        submission: '6. Paket submit'
+      }
+    },
+    // 泰語
+    'th': {
+      langLabel: 'ภาษาที่ใช้สร้าง',
+      nav: {
+        project: '1. โปรเจกต์และวารสาร',
+        design: '2. การออกแบบวิจัย',
+        literature: '3. เอกสารและการอ้างอิง',
+        data: '4. ข้อมูลและการวิเคราะห์',
+        writing: '5. การเขียนและผู้ประเมิน',
+        submission: '6. ชุดส่งบทความ'
+      }
+    }
+  };
+
+  // 每個分頁上方主標題與副標題的語系字典
+  const TAB_I18N = {
+    'zh-TW': {
+      project: {
+        title: '專案＆期刊設定',
+        subtitle: '從期刊開始，決定整篇論文的遊戲規則。'
+      },
+      design: {
+        title: '研究設計',
+        subtitle: '在此整理研究問題、假設、變項與分析方法。'
+      },
+      literature: {
+        title: '文獻＆引用管理',
+        subtitle: '所有引用一律來自上傳之文獻池（referencePool）。'
+      },
+      data: {
+        title: '數據＆分析',
+        subtitle: '整理統計結果，準備撰寫結果與討論。'
+      },
+      writing: {
+        title: '寫作＆Reviewer',
+        subtitle: '分章撰寫，並由 AI 協助檢視與評論。'
+      },
+      submission: {
+        title: '投稿包',
+        subtitle: '將稿件、cover letter 與回覆信整合成投稿套餐。'
+      }
+    },
+    'zh-CN': {
+      project: {
+        title: '项目与期刊设置',
+        subtitle: '从目标期刊出发，决定整篇论文的游戏规则。'
+      },
+      design: {
+        title: '研究设计',
+        subtitle: '在这里整理研究问题、假设、变量与分析方法。'
+      },
+      literature: {
+        title: '文献与引用管理',
+        subtitle: '所有引用一律来自上传的文献池（referencePool）。'
+      },
+      data: {
+        title: '数据与分析',
+        subtitle: '整理统计结果，准备撰写结果与讨论。'
+      },
+      writing: {
+        title: '写作与审稿',
+        subtitle: '逐章撰写，并由 AI 协助检查与评论。'
+      },
+      submission: {
+        title: '投稿包',
+        subtitle: '将稿件、cover letter 与回信整合成投稿套装。'
+      }
+    },
+    'en': {
+      project: {
+        title: 'Project & journal setup',
+        subtitle: 'Start from the target journal to decide the rules of the whole paper.'
+      },
+      design: {
+        title: 'Research design',
+        subtitle: 'Organise research questions, hypotheses, variables, and analysis methods here.'
+      },
+      literature: {
+        title: 'Literature & citation management',
+        subtitle: 'All citations must come from the uploaded reference pool (referencePool) only.'
+      },
+      data: {
+        title: 'Data & analysis',
+        subtitle: 'Organise statistical results and prepare to write Results and Discussion.'
+      },
+      writing: {
+        title: 'Writing & reviewer',
+        subtitle: 'Write each section and let the AI help you review and comment.'
+      },
+      submission: {
+        title: 'Submission package',
+        subtitle: 'Combine manuscript, cover letter, and response letters into one submission package.'
+      }
+    },
+    'ja': {
+      project: {
+        title: 'プロジェクトとジャーナルの設定',
+        subtitle: 'ターゲットジャーナルから出発して，論文全体の「ルール」を決めます。'
+      },
+      design: {
+        title: '研究デザイン',
+        subtitle: 'ここで研究課題・仮説・変数と分析方法を整理します。'
+      },
+      literature: {
+        title: '文献と引用管理',
+        subtitle: 'すべての引用はアップロードした文献プール（referencePool）のみから使用します。'
+      },
+      data: {
+        title: 'データと分析',
+        subtitle: '統計結果を整理し，結果・考察章の執筆に備えます。'
+      },
+      writing: {
+        title: '執筆と査読',
+        subtitle: '章ごとに執筆し，AI によるチェックとコメントを受けます。'
+      },
+      submission: {
+        title: '投稿パッケージ',
+        subtitle: '原稿・カバーレター・査読者への返信をひとつの投稿パッケージとしてまとめます。'
+      }
+    },
+    'vi': {
+      project: {
+        title: 'Thiết lập dự án & tạp chí',
+        subtitle: 'Bắt đầu từ tạp chí mục tiêu để xác định “luật chơi” của toàn bài báo.'
+      },
+      design: {
+        title: 'Thiết kế nghiên cứu',
+        subtitle: 'Sắp xếp câu hỏi nghiên cứu, giả thuyết, biến số và phương pháp phân tích tại đây.'
+      },
+      literature: {
+        title: 'Quản lý tài liệu & trích dẫn',
+        subtitle: 'Mọi trích dẫn đều phải đến từ kho tài liệu đã tải lên (referencePool).'
+      },
+      data: {
+        title: 'Dữ liệu & phân tích',
+        subtitle: 'Tổng hợp kết quả thống kê, chuẩn bị viết phần Kết quả và Thảo luận.'
+      },
+      writing: {
+        title: 'Viết bài & phản biện',
+        subtitle: 'Viết từng chương và để AI hỗ trợ kiểm tra, phản biện.'
+      },
+      submission: {
+        title: 'Gói gửi bài',
+        subtitle: 'Tổng hợp bản thảo, thư gửi biên tập và thư trả lời phản biện thành một gói gửi bài.'
+      }
+    },
+    'id': {
+      project: {
+        title: 'Pengaturan proyek & jurnal',
+        subtitle: 'Mulai dari jurnal tujuan untuk menentukan “aturan main” artikel secara keseluruhan.'
+      },
+      design: {
+        title: 'Desain penelitian',
+        subtitle: 'Susun pertanyaan riset, hipotesis, variabel, dan metode analisis di sini.'
+      },
+      literature: {
+        title: 'Manajemen literatur & sitasi',
+        subtitle: 'Semua sitasi harus bersumber dari referencePool yang telah diunggah.'
+      },
+      data: {
+        title: 'Data & analisis',
+        subtitle: 'Ringkas hasil statistik dan bersiap menulis bagian Hasil dan Pembahasan.'
+      },
+      writing: {
+        title: 'Penulisan & reviewer',
+        subtitle: 'Tulis tiap bab dan biarkan AI membantu meninjau dan memberi komentar.'
+      },
+      submission: {
+        title: 'Paket submit',
+        subtitle: 'Gabungkan manuskrip, cover letter, dan surat balasan reviewer menjadi satu paket submit.'
+      }
+    },
+    'th': {
+      project: {
+        title: 'ตั้งค่าโปรเจกต์และวารสาร',
+        subtitle: 'เริ่มจากวารสารเป้าหมายเพื่อตั้ง “กติกา” ของบทความทั้งฉบับ.'
+      },
+      design: {
+        title: 'การออกแบบวิจัย',
+        subtitle: 'จัดระเบียบคำถามวิจัย สมมติฐาน ตัวแปร และวิธีวิเคราะห์ที่นี่.'
+      },
+      literature: {
+        title: 'การจัดการเอกสารและการอ้างอิง',
+        subtitle: 'การอ้างอิงทั้งหมดต้องมาจากคลังเอกสารที่อัปโหลดไว้ (referencePool) เท่านั้น.'
+      },
+      data: {
+        title: 'ข้อมูลและการวิเคราะห์',
+        subtitle: 'สรุปผลการวิเคราะห์ทางสถิติ และเตรียมเขียนส่วนผลการวิจัยและอภิปรายผล.'
+      },
+      writing: {
+        title: 'การเขียนและผู้ประเมิน',
+        subtitle: 'เขียนทีละบท และให้ AI ช่วยตรวจและให้ความเห็น.'
+      },
+      submission: {
+        title: 'ชุดส่งบทความ',
+        subtitle: 'รวมต้นฉบับ จดหมายปะหน้า และจดหมายตอบผู้ประเมินเป็นชุดส่งบทความเดียวกัน.'
+      }
+    }
+  };
+
+  // 套用語系到主要 UI（側欄 nav、header 標題等等）
+  function applyLanguage(lang) {
+    const langCode = lang || state.lang || 'zh-TW';
+    const uiPack = UI_I18N[langCode] || UI_I18N['zh-TW'];
+
+    // <html lang="...">
+    if (document.documentElement) {
+      document.documentElement.lang = langCode;
+    }
+
+    // Header：生成語言 label
+    const langLabel = document.getElementById('lang-label');
+    if (langLabel && uiPack.langLabel) {
+      langLabel.textContent = uiPack.langLabel;
+    }
+
+    // 側欄 nav 文字
+    if (uiPack.nav) {
+      const navProject = document.querySelector('.nav-btn[data-tab="project"] span');
+      const navDesign = document.querySelector('.nav-btn[data-tab="design"] span');
+      const navLiterature = document.querySelector('.nav-btn[data-tab="literature"] span');
+      const navData = document.querySelector('.nav-btn[data-tab="data"] span');
+      const navWriting = document.querySelector('.nav-btn[data-tab="writing"] span');
+      const navSubmission = document.querySelector('.nav-btn[data-tab="submission"] span');
+
+      if (navProject && uiPack.nav.project) navProject.textContent = uiPack.nav.project;
+      if (navDesign && uiPack.nav.design) navDesign.textContent = uiPack.nav.design;
+      if (navLiterature && uiPack.nav.literature) navLiterature.textContent = uiPack.nav.literature;
+      if (navData && uiPack.nav.data) navData.textContent = uiPack.nav.data;
+      if (navWriting && uiPack.nav.writing) navWriting.textContent = uiPack.nav.writing;
+      if (navSubmission && uiPack.nav.submission) navSubmission.textContent = uiPack.nav.submission;
+    }
+
+    // 目前 tab 的主標題、副標題交給 switchTab() 依 TAB_I18N 控制
+    // 這裡不直接改 main-title / main-subtitle，避免和 switchTab 邏輯打架
+  }
 
   /**********************
    * 全域狀態：v3       *
