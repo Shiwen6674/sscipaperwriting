@@ -1071,7 +1071,6 @@
     renderAnalysisPlanData();
     renderSnapshotList();
     updateProjectMeta();
-    switchTab('project');
     switchChapter(); // 初始化章節
     renderLiteratureList();
     renderLiteraturePreview();
@@ -1158,45 +1157,58 @@
     if (firstNav) firstNav.classList.add('bg-slate-800');
   }
 
-  function initLangSelect() {
-    const sel = document.getElementById('lang-select');
-    const langLabel = document.getElementById('lang-label');
-    if (!sel) return;
-    const options = [
-      { value: 'zh-TW', label: '繁體中文' },
-      { value: 'en', label: 'English' },
-      { value: 'ja', label: '日本語' },
-      { value: 'zh-CN', label: '簡體中文' },
-      { value: 'vi', label: '越語' },
-      { value: 'id', label: '印尼語' },
-      { value: 'th', label: '泰語' }
-    ];
-    sel.innerHTML = '';
-    options.forEach(opt => {
-      const o = document.createElement('option');
-      o.value = opt.value;
-      o.textContent = opt.label;
-      sel.appendChild(o);
-    });
-    sel.value = state.lang || 'zh-TW';
-    // ******************************************************
-    // 這裡實現了語言選單與 state.lang 的連動和保存。
-    // 由於不能變動不相關程式，全頁文字的翻譯 (如標題/按鈕文字) 需額外實作，
-    // 這裡僅示範 label 的模擬連動和 state 的更新。
-    // ******************************************************
-    sel.addEventListener('change', () => {
-      state.lang = sel.value;
-      if (langLabel) {
-        // 根據語言切換 '生成語言' 標籤 (僅模擬切換，實現全頁翻譯需更多靜態資源)
-        langLabel.textContent = 
-            state.lang === 'en' ? 'Gen. Language' : 
-            state.lang === 'ja' ? '生成言語' : 
-            state.lang === 'zh-CN' ? '生成语言' : 
-            '生成語言';
-      }
-      scheduleSaveState();
-    });
-  }
+  function initLangSelect() {
+    const sel = document.getElementById('lang-select');
+    const langLabel = document.getElementById('lang-label');
+    if (!sel) return;
+
+    const options = [
+      { value: 'zh-TW', label: '繁體中文' },
+      { value: 'en', label: 'English' },
+      { value: 'ja', label: '日本語' },
+      { value: 'zh-CN', label: '簡體中文' },
+      { value: 'vi', label: '越南語' },
+      { value: 'id', label: '印尼語' },
+      { value: 'th', label: '泰語' }
+    ];
+
+    sel.innerHTML = '';
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      sel.appendChild(o);
+    });
+
+    // 從 state 還原語系，預設 zh-TW
+    const currentLang = state.lang || 'zh-TW';
+    sel.value = currentLang;
+
+    // 先套一次目前語系到整個頁面
+    applyLanguage(currentLang);
+    // 也更新 header 的標題/副標題（需等 main-title/main-subtitle 都存在）
+    if (state.currentTab) {
+      switchTab(state.currentTab);
+    } else {
+      switchTab('project');
+    }
+
+    sel.addEventListener('change', () => {
+      state.lang = sel.value || 'zh-TW';
+      scheduleSaveState();
+
+      // 套用新的語系到 UI
+      applyLanguage(state.lang);
+
+      // 讓目前所在分頁的主標題 / 副標題也一起換語言
+      if (state.currentTab) {
+        switchTab(state.currentTab);
+      } else {
+        switchTab('project');
+      }
+    });
+  }
+
 
   function initJournalSelect() {
     const sel = document.getElementById('journal-select');
@@ -1252,34 +1264,36 @@
     updateChecklistForChapter(state.currentChapter || 'outline');
   }
 
-  function switchTab(tabId) {
-    state.currentTab = tabId;
-    const tabs = ['project', 'design', 'literature', 'data', 'writing', 'submission'];
-    tabs.forEach(id => {
-      const el = document.getElementById('tab-' + id);
-      if (el) el.classList.toggle('hidden', id !== tabId);
-    });
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.classList.toggle('bg-slate-800', btn.dataset.tab === tabId);
-    });
+  state.currentChapter = 'outline';
 
-    const title = document.getElementById('main-title');
-    const subtitle = document.getElementById('main-subtitle');
-    if (!title || !subtitle) return;
+  function switchTab(tabId) {
+    state.currentTab = tabId;
+    const tabs = ['project', 'design', 'literature', 'data', 'writing', 'submission'];
+    tabs.forEach(id => {
+      const el = document.getElementById('tab-' + id);
+      if (el) el.classList.toggle('hidden', id !== tabId);
+    });
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.toggle('bg-slate-800', btn.dataset.tab === tabId);
+    });
 
-    const map = {
-      project: ['專案＆期刊設定', '從期刊開始，決定整篇論文的遊戲規則。'],
-      design: ['研究設計', '在此整理研究問題、假設、變項與分析方法。'],
-      literature: ['文獻＆引用管理', '所有引用一律來自上傳之文獻池（referencePool）。'],
-      data: ['數據＆分析', '整理統計結果，準備撰寫結果與討論。'],
-      writing: ['寫作＆Reviewer', '分章撰寫，並由 AI 協助檢視與評論。'],
-      submission: ['投稿包', '將稿件、cover letter 與回覆信整合成投稿套餐。']
-    };
-    if (map[tabId]) {
-      title.textContent = map[tabId][0];
-      subtitle.textContent = map[tabId][1];
-    }
-  }
+    const title = document.getElementById('main-title');
+    const subtitle = document.getElementById('main-subtitle');
+    if (!title || !subtitle) return;
+
+    // 根據目前語系，從 TAB_I18N 取對應文字
+    const langCode = state.lang || 'zh-TW';
+    const langPack = TAB_I18N[langCode] || TAB_I18N['zh-TW'];
+    const tabPack = langPack[tabId];
+
+    if (tabPack) {
+      title.textContent = tabPack.title;
+      subtitle.textContent = tabPack.subtitle;
+    }
+
+    // 其餘和原本一樣：這裡不動 chapter / checklist 等邏輯
+  }
+
 
   /**********************
    * 章節切換與字數計算 *
