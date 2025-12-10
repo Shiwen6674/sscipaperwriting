@@ -610,13 +610,13 @@ const BACKEND_CONFIG = {
   USE_MOCK: false // 先給你 mock 測試，確認前端完全正常，再改成 false 接真後端
 };
 
-async function callBackend(endpoint, payload) {
+async function callBackend(action, payload) {
   if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
-    console.warn('[ScholarCraft] 使用 mock 後端：', endpoint, payload);
+    console.warn('[ScholarCraft] 使用 mock 後端：', action, payload);
     await new Promise(r => setTimeout(r, 400)); // 模擬延遲
 
     // ---- Mock：期刊適配檢查 ----
-    if (endpoint === '/fitCheck') {
+    if (action === 'fitCheck') {
       const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
       const field = payload.projectMeta.field || '未填寫領域';
       let score = 70;
@@ -637,11 +637,38 @@ async function callBackend(endpoint, payload) {
             `3. 字數預估：約 ${wordStats.total}（中/日：${wordStats.cjkChars}，英：${wordStats.enWords}），目前仍在可接受範圍內。\n`
         }
       };
+    }async function callBackend(action, payload) {
+  if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
+    console.warn('[ScholarCraft] 使用 mock 後端：', action, payload);
+    await new Promise(r => setTimeout(r, 400)); // 模擬延遲
+
+    // ---- Mock：期刊適配檢查 ----
+    if (action === 'fitCheck') {
+      const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
+      const field = payload.projectMeta?.field || '未填寫領域';
+      let score = 70;
+      if (['L&I', 'IJSME', 'TAPER'].includes(journal.abbr)) score += 10;
+      if (payload.design?.type === 'quant' || payload.design?.type === 'mixed') score += 5;
+
+      const wordStats = getWordStats(Object.values(payload.chapters || {}).join(' '));
+      return {
+        ok: true,
+        data: {
+          summary:
+            `【Mock】期刊適配檢查\n\n` +
+            `專案領域：${field}\n` +
+            `目標期刊：${journal.name} (${journal.abbr})\n\n` +
+            `綜合適配分數：${score}/100\n\n` +
+            `1. 領域契合度：與期刊 scope 大致相符，可加強與近期專題的連結。\n` +
+            `2. 研究設計：${payload.design?.type || '未指定'}；請在 Method 中明確說明樣本與統計方法。\n` +
+            `3. 字數預估：約 ${wordStats.total}（中/日：${wordStats.cjkChars}，英：${wordStats.enWords}），目前仍在可接受範圍內。\n`
+        }
+      };
     }
 
     // ---- Mock：品質＆倫理檢查 ----
-    if (endpoint === '/qualityCheck') {
-      const full = payload.chapters.fullpaper || '';
+    if (action === 'qualityCheck') {
+      const full = payload.chapters?.fullpaper || '';
       const wordStats = getWordStats(full);
       const tooShort = wordStats.total < 1500;
 
@@ -658,7 +685,7 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：章節生成 ----
-    if (endpoint === '/generateChapter') {
+    if (action === 'generateChapter') {
       return {
         ok: true,
         data: {
@@ -669,7 +696,7 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：Reviewer 模式 ----
-    if (endpoint === '/reviewChapter') {
+    if (action === 'reviewChapter') {
       return {
         ok: true,
         data: {
@@ -684,7 +711,7 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：AI 自動配文獻 ----
-    if (endpoint === '/autoCiteChapter') {
+    if (action === 'autoCiteChapter') {
       return {
         ok: true,
         data: {
@@ -695,7 +722,7 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：結果章節草稿 ----
-    if (endpoint === '/resultsDraft') {
+    if (action === 'resultsDraft') {
       return {
         ok: true,
         data: {
@@ -705,7 +732,7 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：方法章節草稿 ----
-    if (endpoint === '/methodDraft') {
+    if (action === 'methodDraft') {
       return {
         ok: true,
         data: {
@@ -715,12 +742,17 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：同步文獻 ----
-    if (endpoint === '/syncReferences') {
-      return { ok: true, data: { message: `Mock：已接收 ${payload.referencePool?.length || 0} 筆文獻（未實際寫入後端）。` } };
+    if (action === 'syncReferences') {
+      return {
+        ok: true,
+        data: {
+          message: `Mock：已接收 ${payload.referencePool?.length || 0} 筆文獻（未實際寫入後端）。`
+        }
+      };
     }
 
     // ---- Mock：投稿包相關 ----
-    if (endpoint === '/generateCoverLetter') {
+    if (action === 'generateCoverLetter') {
       return {
         ok: true,
         data: {
@@ -729,7 +761,7 @@ async function callBackend(endpoint, payload) {
       };
     }
 
-    if (endpoint === '/generateResponseToReviewers') {
+    if (action === 'generateResponseToReviewers') {
       return {
         ok: true,
         data: {
@@ -739,7 +771,7 @@ async function callBackend(endpoint, payload) {
     }
 
     // ---- Mock：自由聊天 ----
-    if (endpoint === '/chat') {
+    if (action === 'chat') {
       return {
         ok: true,
         data: {
@@ -751,11 +783,15 @@ async function callBackend(endpoint, payload) {
     return { ok: true, data: {} };
   }
 
+  // === 真實後端區 ===
   try {
-    const res = await fetch(BACKEND_CONFIG.API_BASE_URL + endpoint, {
+    const res = await fetch(BACKEND_CONFIG.API_BASE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {})
+      body: JSON.stringify({
+        action,
+        payload: payload || {}
+      })
     });
     if (!res.ok) {
       console.error('Backend HTTP error', res.status, await res.text());
@@ -768,6 +804,7 @@ async function callBackend(endpoint, payload) {
     return { ok: false, error: err.message || String(err) };
   }
 }
+
 
 function escapeHtml(str) {
   return (str || '').replace(/[&<>"']/g, function (m) {
@@ -1783,7 +1820,7 @@ function generateReferencesSection() {
 }
 
 async function syncLiteratureToBackend() {
-  const res = await callBackend('/syncReferences', {
+  const res = await callBackend('syncReferences', {
     projectId: state.projectId,
     referencePool: state.referencePool
   });
@@ -1917,7 +1954,7 @@ function appendChatMessage(role, text) {
 
 async function generateChapterDraft() {
   const chapterKey = state.currentChapter;
-  const res = await callBackend('/generateChapter', {
+  const res = await callBackend('generateChapter', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     chapterKey,
@@ -1944,7 +1981,7 @@ async function generateChapterDraft() {
 
 async function runReviewerMode() {
   const chapterKey = state.currentChapter;
-  const res = await callBackend('/reviewChapter', {
+  const res = await callBackend('reviewChapter', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     chapterKey,
@@ -1965,7 +2002,7 @@ async function runReviewerMode() {
 
 async function runAutoCitationForCurrentChapter() {
   const chapterKey = state.currentChapter;
-  const res = await callBackend('/autoCiteChapter', {
+  const res = await callBackend('autoCiteChapter', {
     lang: state.lang,
     chapterKey,
     chapterText: state.chapters[chapterKey] || '',
@@ -1996,7 +2033,7 @@ async function sendAIMessage() {
   appendChatMessage('user', prompt);
   input.value = '';
 
-  const res = await callBackend('/chat', {
+  const res = await callBackend('chat', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     chapterKey: state.currentChapter,
@@ -2017,7 +2054,7 @@ async function sendAIMessage() {
 // AI：Method / Results
 // =======================
 async function generateMethodDraft() {
-  const res = await callBackend('/methodDraft', {
+  const res = await callBackend('methodDraft', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     design: state.design,
@@ -2040,7 +2077,7 @@ async function generateMethodDraft() {
 }
 
 async function generateResultsDraft() {
-  const res = await callBackend('/resultsDraft', {
+  const res = await callBackend('resultsDraft', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     design: state.design,
@@ -2066,7 +2103,7 @@ async function generateResultsDraft() {
 // =======================
 async function runManuscriptFitCheck() {
   const jp = state.journalProfiles[state.projectMeta.journalKey] || null;
-  const res = await callBackend('/fitCheck', {
+  const res = await callBackend('fitCheck', {
     lang: state.lang,
     projectMeta: state.projectMeta,
     design: state.design,
@@ -2082,7 +2119,7 @@ async function runManuscriptFitCheck() {
 }
 
 async function runQualityCheck() {
-  const res = await callBackend('/qualityCheck', {
+  const res = await callBackend('qualityCheck', {
     lang: state.lang,
     projectMeta: state.projectMeta,
     design: state.design,
@@ -2122,7 +2159,7 @@ function restoreSubmissionUI() {
 }
 
 async function generateCoverLetter() {
-  const res = await callBackend('/generateCoverLetter', {
+  const res = await callBackend('generateCoverLetter', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     projectMeta: state.projectMeta,
@@ -2140,7 +2177,7 @@ async function generateCoverLetter() {
 }
 
 async function generateResponseToReviewers() {
-  const res = await callBackend('/generateResponseToReviewers', {
+  const res = await callBackend('generateResponseToReviewers', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     projectMeta: state.projectMeta,
