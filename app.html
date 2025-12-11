@@ -610,194 +610,153 @@ const BACKEND_CONFIG = {
   USE_MOCK: false // 先給你 mock 測試，確認前端完全正常，再改成 false 接真後端
 };
 
+
+// === 後端呼叫與 Mock 區 ===
+// 全系統只保留「這一個」 callBackend，不要有第二個版本
 async function callBackend(action, payload) {
+  // 如果後端網址沒設定，或開啟 USE_MOCK，就走 mock（避免前端整個掛掉）
   if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
     console.warn('[ScholarCraft] 使用 mock 後端：', action, payload);
-    await new Promise(r => setTimeout(r, 400)); // 模擬延遲
+    // 模擬延遲，避免畫面感覺「秒回」太假
+    await new Promise(r => setTimeout(r, 400));
 
-    // ---- Mock：期刊適配檢查 ----
-    if (action === 'fitCheck') {
-      const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
-      const field = payload.projectMeta.field || '未填寫領域';
-      let score = 70;
-      if (journal.abbr === 'L&I' || journal.abbr === 'IJSME' || journal.abbr === 'TAPER') score += 10;
-      if (payload.design.type === 'quant' || payload.design.type === 'mixed') score += 5;
-
-      const wordStats = getWordStats(Object.values(payload.chapters || {}).join(' '));
-      return {
-        ok: true,
-        data: {
-          summary:
-            `【Mock】期刊適配檢查\n\n` +
-            `專案領域：${field}\n` +
-            `目標期刊：${journal.name} (${journal.abbr})\n\n` +
-            `綜合適配分數：${score}/100\n\n` +
-            `1. 領域契合度：與期刊 scope 大致相符，可加強與近期專題的連結。\n` +
-            `2. 研究設計：${payload.design.type || '未指定'}；請在 Method 中明確說明樣本與統計方法。\n` +
-            `3. 字數預估：約 ${wordStats.total}（中/日：${wordStats.cjkChars}，英：${wordStats.enWords}），目前仍在可接受範圍內。\n`
-        }
-      };
-    }async function callBackend(action, payload) {
-  if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
-    console.warn('[ScholarCraft] 使用 mock 後端：', action, payload);
-    await new Promise(r => setTimeout(r, 400)); // 模擬延遲
+    // 這裡依照 action 分流處理四大功能：
+    // 1) fitCheck（期刊適配檢查）
+    // 2) qualityCheck（品質與倫理審查）
+    // 3) submissionPack（投稿包）
+    // 4) generateChapter（寫作 AI）
 
     // ---- Mock：期刊適配檢查 ----
     if (action === 'fitCheck') {
       const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
       const field = payload.projectMeta?.field || '未填寫領域';
+
       let score = 70;
       if (['L&I', 'IJSME', 'TAPER'].includes(journal.abbr)) score += 10;
       if (payload.design?.type === 'quant' || payload.design?.type === 'mixed') score += 5;
 
-      const wordStats = getWordStats(Object.values(payload.chapters || {}).join(' '));
+      // 若你已經有 getWordStats(text) 的實作，就會用到這裡
+      const allText = Object.values(payload.chapters || {}).join(' ');
+      const wordStats = typeof getWordStats === 'function'
+        ? getWordStats(allText)
+        : { totalWords: allText.length, uniqueWords: 0 };
+
       return {
         ok: true,
         data: {
           summary:
-            `【Mock】期刊適配檢查\n\n` +
-            `專案領域：${field}\n` +
-            `目標期刊：${journal.name} (${journal.abbr})\n\n` +
-            `綜合適配分數：${score}/100\n\n` +
-            `1. 領域契合度：與期刊 scope 大致相符，可加強與近期專題的連結。\n` +
-            `2. 研究設計：${payload.design?.type || '未指定'}；請在 Method 中明確說明樣本與統計方法。\n` +
-            `3. 字數預估：約 ${wordStats.total}（中/日：${wordStats.cjkChars}，英：${wordStats.enWords}），目前仍在可接受範圍內。\n`
+            `【Mock】期刊適配檢查結果\n\n` +
+            `‧ 建議投稿期刊：${journal.name}（${journal.abbr}）\n` +
+            `‧ 研究領域：${field}\n` +
+            `‧ 綜合適配度：約 ${score} / 100\n\n` +
+            `本結果為前端 mock 資料，僅供介面測試使用。`,
+          score,
+          wordStats
         }
       };
     }
 
-    // ---- Mock：品質＆倫理檢查 ----
+    // ---- Mock：品質與倫理審查 ----
     if (action === 'qualityCheck') {
-      const full = payload.chapters?.fullpaper || '';
-      const wordStats = getWordStats(full);
-      const tooShort = wordStats.total < 1500;
+      const riskFlags = [];
+
+      if (!payload.projectMeta?.hasIRB) {
+        riskFlags.push('尚未明確說明 IRB / 研究倫理審查。');
+      }
+      if (!payload.dataPlan?.anonymization) {
+        riskFlags.push('資料去識別化與隱私保護描述不足。');
+      }
 
       return {
         ok: true,
         data: {
           summary:
-            `【Mock】品質＆倫理檢查\n\n` +
-            `1. 結構完整度：${tooShort ? '目前全文字數偏少，建議補齊各章節內容。' : '章節結構大致完整，可進一步優化過渡與論證深度。'}\n` +
-            `2. 方法與結果透明度：請在 Method 中補上量表信度、IRB/倫理審查資訊，以及在 Results 報告完整統計量（M, SD, F, p, η² 等）。\n` +
-            `3. 研究倫理：若涉及學生或弱勢族群，需在稿件中清楚說明同意程序與資料匿名化處理方式。\n`
+            `【Mock】品質與倫理審查報告\n\n` +
+            `一、整體評估\n` +
+            `‧ 研究設計與統計方法基本合理，但需補強倫理說明細節。\n\n` +
+            `二、潛在風險提醒\n` +
+            (riskFlags.length
+              ? riskFlags.map((s, i) => `${i + 1}. ${s}`).join('\n')
+              : '目前未偵測到明顯倫理風險。') +
+            `\n\n三、建議\n‧ 補充 IRB 申請情形與受試者權益保護說明。`,
+          riskFlags
         }
       };
     }
 
-    // ---- Mock：章節生成 ----
-    if (action === 'generateChapter') {
-      return {
-        ok: true,
-        data: {
-          text: (payload.chapterText || '') +
-            '\n\n[Mock AI]（示意）此處會根據你的研究設計與文獻池，自動擴充本章內容。接上真實後端後即可產生正式草稿。'
-        }
-      };
-    }
+    // ---- Mock：投稿包（cover letter / highlights / 建議審稿人）----
+    if (action === 'submissionPack') {
+      const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
+      const title = payload.projectMeta?.title || '（暫定標題）';
 
-    // ---- Mock：Reviewer 模式 ----
-    if (action === 'reviewChapter') {
       return {
         ok: true,
         data: {
-          summary: 'Mock Reviewer：整體結構大致合理，但仍有幾點可加強。',
-          comments: [
-            '1. 建議在段落開頭更清楚界定研究問題與理論落點。',
-            '2. 可補充近五年 SSCI 期刊中相關主題的實證研究，以強化文獻連結。',
-            '3. 結果與討論之間的對應關係可以再更緊密，避免僅重述統計數字。'
+          coverLetter:
+            `Dear Editor,\n\n` +
+            `  We would like to submit our manuscript entitled "${title}" to ${journal.name} (${journal.abbr}). ` +
+            `This study investigates ...（此處為 mock 內容，實際版將由後端 AI 生成。）\n\n` +
+            `Sincerely,\n` +
+            `  Corresponding Author\n`,
+          highlights: [
+            '‧ Mock：本研究針對 XXX 問題提出系統性分析架構。',
+            '‧ Mock：結合量化與質性資料，呈現多層次證據。',
+            '‧ Mock：對科學／數學教育實務具體提出教學建議。'
+          ],
+          suggestedReviewers: [
+            { name: 'Mock Reviewer A', institution: 'University of Somewhere', email: 'reviewerA@example.com' },
+            { name: 'Mock Reviewer B', institution: 'Institute of Education', email: 'reviewerB@example.com' }
           ]
         }
       };
     }
 
-    // ---- Mock：AI 自動配文獻 ----
-    if (action === 'autoCiteChapter') {
+    // ---- Mock：寫作 AI（單章節生成 / 擴寫）----
+    if (action === 'generateChapter') {
+      const section = payload.section || '未命名章節';
+      const target = payload.target || 'introduction';
+
       return {
         ok: true,
         data: {
-          text: (payload.chapterText || '') +
-            '\n\n[Mock AI] 已示意性加入幾處 (Author, Year) 引用標記；接真實後端後會依 referencePool 精準配對。'
+          content:
+            `【Mock】${section}（${target}）\n\n` +
+            `此段文字為前端 mock，用來測試「寫作 AI」的畫面流程。\n` +
+            `實際部署時，將由後端 Gemini / ChatGPT 根據你的研究背景、文獻池與期刊要求，\n` +
+            `生成 SSCI 水準的段落，並回傳完整內容供你再做人工修訂。`
         }
       };
     }
 
-    // ---- Mock：結果章節草稿 ----
-    if (action === 'resultsDraft') {
-      return {
-        ok: true,
-        data: {
-          text: '[Mock AI] 這裡會根據你上傳的分析輸出與 dataNotes，自動撰寫 Results 章節的敘述草稿。'
-        }
-      };
-    }
-
-    // ---- Mock：方法章節草稿 ----
-    if (action === 'methodDraft') {
-      return {
-        ok: true,
-        data: {
-          text: '[Mock AI] 這裡會利用研究設計（樣本、工具、RQ、分析方法）生成 Method 章節骨架與敘述。'
-        }
-      };
-    }
-
-    // ---- Mock：同步文獻 ----
-    if (action === 'syncReferences') {
-      return {
-        ok: true,
-        data: {
-          message: `Mock：已接收 ${payload.referencePool?.length || 0} 筆文獻（未實際寫入後端）。`
-        }
-      };
-    }
-
-    // ---- Mock：投稿包相關 ----
-    if (action === 'generateCoverLetter') {
-      return {
-        ok: true,
-        data: {
-          text: '[Mock AI] 根據你的專案資訊與目標期刊，這裡會生成一封正式且符合期刊風格的 Cover Letter 草稿。'
-        }
-      };
-    }
-
-    if (action === 'generateResponseToReviewers') {
-      return {
-        ok: true,
-        data: {
-          text: '[Mock AI] 這裡會根據你貼上的 reviewers 意見與稿件內容，建立逐點回覆的 Response to Reviewers 草稿。'
-        }
-      };
-    }
-
-    // ---- Mock：自由聊天 ----
-    if (action === 'chat') {
-      return {
-        ok: true,
-        data: {
-          reply: '[Mock AI] 這是示意回覆。接上真實後端後，我會依你的指令與目前章節內容給出具體建議。'
-        }
-      };
-    }
-
-    return { ok: true, data: {} };
+    // ---- 其他尚未實作的 mock action ----
+    console.warn('[ScholarCraft] 未定義的 mock action：', action);
+    return { ok: false, error: '未定義的 mock action：' + action };
   }
 
-  // === 真實後端區 ===
+  // === 真實後端區：呼叫 GAS / FastAPI / Cloud Run ===
   try {
     const res = await fetch(BACKEND_CONFIG.API_BASE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         action,
         payload: payload || {}
       })
     });
+
     if (!res.ok) {
-      console.error('Backend HTTP error', res.status, await res.text());
+      const text = await res.text().catch(() => '');
+      console.error('Backend HTTP error', res.status, text);
       return { ok: false, error: 'HTTP ' + res.status };
     }
-    const data = await res.json();
+
+    const data = await res.json().catch(err => {
+      console.error('Backend JSON parse error', err);
+      throw err;
+    });
+
     return { ok: true, data };
   } catch (err) {
     console.error('Backend fetch error', err);
