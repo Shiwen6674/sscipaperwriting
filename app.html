@@ -613,132 +613,18 @@ const BACKEND_CONFIG = {
 
 // === 後端呼叫與 Mock 區 ===
 // 全系統只保留「這一個」 callBackend，不要有第二個版本
+// ==== ScholarCraft 後端呼叫：純後端版，完全不使用 mock ====
 async function callBackend(action, payload) {
-  // 如果後端網址沒設定，或開啟 USE_MOCK，就走 mock（避免前端整個掛掉）
-  if (!BACKEND_CONFIG.API_BASE_URL || BACKEND_CONFIG.USE_MOCK) {
-    console.warn('[ScholarCraft] 使用 mock 後端：', action, payload);
-    // 模擬延遲，避免畫面感覺「秒回」太假
-    await new Promise(r => setTimeout(r, 400));
-
-    // 這裡依照 action 分流處理四大功能：
-    // 1) fitCheck（期刊適配檢查）
-    // 2) qualityCheck（品質與倫理審查）
-    // 3) submissionPack（投稿包）
-    // 4) generateChapter（寫作 AI）
-
-    // ---- Mock：期刊適配檢查 ----
-    if (action === 'fitCheck') {
-      const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
-      const field = payload.projectMeta?.field || '未填寫領域';
-
-      let score = 70;
-      if (['L&I', 'IJSME', 'TAPER'].includes(journal.abbr)) score += 10;
-      if (payload.design?.type === 'quant' || payload.design?.type === 'mixed') score += 5;
-
-      // 若你已經有 getWordStats(text) 的實作，就會用到這裡
-      const allText = Object.values(payload.chapters || {}).join(' ');
-      const wordStats = typeof getWordStats === 'function'
-        ? getWordStats(allText)
-        : { totalWords: allText.length, uniqueWords: 0 };
-
-      return {
-        ok: true,
-        data: {
-          summary:
-            `【Mock】期刊適配檢查結果\n\n` +
-            `‧ 建議投稿期刊：${journal.name}（${journal.abbr}）\n` +
-            `‧ 研究領域：${field}\n` +
-            `‧ 綜合適配度：約 ${score} / 100\n\n` +
-            `本結果為前端 mock 資料，僅供介面測試使用。`,
-          score,
-          wordStats
-        }
-      };
-    }
-
-    // ---- Mock：品質與倫理審查 ----
-    if (action === 'qualityCheck') {
-      const riskFlags = [];
-
-      if (!payload.projectMeta?.hasIRB) {
-        riskFlags.push('尚未明確說明 IRB / 研究倫理審查。');
-      }
-      if (!payload.dataPlan?.anonymization) {
-        riskFlags.push('資料去識別化與隱私保護描述不足。');
-      }
-
-      return {
-        ok: true,
-        data: {
-          summary:
-            `【Mock】品質與倫理審查報告\n\n` +
-            `一、整體評估\n` +
-            `‧ 研究設計與統計方法基本合理，但需補強倫理說明細節。\n\n` +
-            `二、潛在風險提醒\n` +
-            (riskFlags.length
-              ? riskFlags.map((s, i) => `${i + 1}. ${s}`).join('\n')
-              : '目前未偵測到明顯倫理風險。') +
-            `\n\n三、建議\n‧ 補充 IRB 申請情形與受試者權益保護說明。`,
-          riskFlags
-        }
-      };
-    }
-
-    // ---- Mock：投稿包（cover letter / highlights / 建議審稿人）----
-    if (action === 'submissionPack') {
-      const journal = payload.journalProfile || { abbr: 'NA', name: '未設定期刊' };
-      const title = payload.projectMeta?.title || '（暫定標題）';
-
-      return {
-        ok: true,
-        data: {
-          coverLetter:
-            `Dear Editor,\n\n` +
-            `  We would like to submit our manuscript entitled "${title}" to ${journal.name} (${journal.abbr}). ` +
-            `This study investigates ...（此處為 mock 內容，實際版將由後端 AI 生成。）\n\n` +
-            `Sincerely,\n` +
-            `  Corresponding Author\n`,
-          highlights: [
-            '‧ Mock：本研究針對 XXX 問題提出系統性分析架構。',
-            '‧ Mock：結合量化與質性資料，呈現多層次證據。',
-            '‧ Mock：對科學／數學教育實務具體提出教學建議。'
-          ],
-          suggestedReviewers: [
-            { name: 'Mock Reviewer A', institution: 'University of Somewhere', email: 'reviewerA@example.com' },
-            { name: 'Mock Reviewer B', institution: 'Institute of Education', email: 'reviewerB@example.com' }
-          ]
-        }
-      };
-    }
-
-    // ---- Mock：寫作 AI（單章節生成 / 擴寫）----
-    if (action === 'generateChapter') {
-      const section = payload.section || '未命名章節';
-      const target = payload.target || 'introduction';
-
-      return {
-        ok: true,
-        data: {
-          content:
-            `【Mock】${section}（${target}）\n\n` +
-            `此段文字為前端 mock，用來測試「寫作 AI」的畫面流程。\n` +
-            `實際部署時，將由後端 Gemini / ChatGPT 根據你的研究背景、文獻池與期刊要求，\n` +
-            `生成 SSCI 水準的段落，並回傳完整內容供你再做人工修訂。`
-        }
-      };
-    }
-
-    // ---- 其他尚未實作的 mock action ----
-    console.warn('[ScholarCraft] 未定義的 mock action：', action);
-    return { ok: false, error: '未定義的 mock action：' + action };
+  if (!BACKEND_CONFIG.API_BASE_URL) {
+    console.error("[ScholarCraft] 尚未設定 BACKEND_CONFIG.API_BASE_URL");
+    return { ok: false, error: "後端網址未設定，請先在 BACKEND_CONFIG 中填入 GAS 網址。" };
   }
 
-  // === 真實後端區：呼叫 GAS / FastAPI / Cloud Run ===
   try {
     const res = await fetch(BACKEND_CONFIG.API_BASE_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         action,
@@ -747,19 +633,28 @@ async function callBackend(action, payload) {
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error('Backend HTTP error', res.status, text);
-      return { ok: false, error: 'HTTP ' + res.status };
+      const text = await res.text().catch(() => "");
+      console.error("[ScholarCraft] 後端 HTTP 錯誤：", res.status, text);
+      return { ok: false, error: "HTTP " + res.status };
     }
 
+    // 後端請回傳 JSON，例如：
+    // { ok: true, data: { ...各功能的資料... } }
     const data = await res.json().catch(err => {
-      console.error('Backend JSON parse error', err);
+      console.error("[ScholarCraft] 後端 JSON 解析錯誤：", err);
       throw err;
     });
 
+    // 如果你的 GAS 已經包成 { ok: true/false, data, error }
+    // 可以直接回傳；如果沒有，也可以在這裡統一包裝。
+    if (data && typeof data.ok === "boolean") {
+      return data;
+    }
+
+    // 否則就當成成功結果，統一包成 { ok: true, data }
     return { ok: true, data };
   } catch (err) {
-    console.error('Backend fetch error', err);
+    console.error("[ScholarCraft] 後端連線錯誤：", err);
     return { ok: false, error: err.message || String(err) };
   }
 }
