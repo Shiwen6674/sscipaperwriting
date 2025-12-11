@@ -2519,14 +2519,20 @@ async function runQualityCheck() {
 // =======================
 // 投稿包區塊
 // =======================
+// =======================
+// 投稿包區塊
+// =======================
 function restoreSubmissionUI() {
   const c = document.getElementById('sub-cover-letter');
   const r = document.getElementById('sub-response');
   const n = document.getElementById('sub-notes');
+
+  // 還原既有內容
   if (c) c.value = state.submission.coverLetter || '';
   if (r) r.value = state.submission.response || '';
   if (n) n.value = state.submission.notes || '';
 
+  // 寫入即時同步到 state + localStorage
   if (c) c.addEventListener('input', () => {
     state.submission.coverLetter = c.value;
     scheduleSaveState();
@@ -2541,55 +2547,91 @@ function restoreSubmissionUI() {
   });
 }
 
+/**
+ * AI 生成 Cover Letter 草稿
+ * 後端 action: generateCoverLetter
+ * 期望回傳格式: { ok: true, data: { text: "..." } }
+ */
 async function generateCoverLetter() {
   const res = await callBackend('generateCoverLetter', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     projectMeta: state.projectMeta,
-    journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null
+    journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null,
+    chapters: state.chapters
   });
+
   if (!res.ok) {
     alert('生成 Cover Letter 失敗：' + (res.error || '未知錯誤'));
     return;
   }
+
   const text = (res.data && res.data.text) || '';
   state.submission.coverLetter = text;
+
   const c = document.getElementById('sub-cover-letter');
   if (c) c.value = text;
+
   scheduleSaveState();
 }
 
+/**
+ * AI 生成 Response to Reviewers 草稿
+ * 後端 action: generateResponseToReviewers
+ * 期望回傳格式: { ok: true, data: { text: "..." } }
+ */
 async function generateResponseToReviewers() {
   const res = await callBackend('generateResponseToReviewers', {
     lang: state.lang,
     stylePreset: state.stylePreset,
     projectMeta: state.projectMeta,
     journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null,
-    responseDraft: state.submission.response || ''
+    chapters: state.chapters,
+    // 使用者目前貼在欄位裡的內容（可以是原始 reviewer 意見＋手動回覆）
+    draftResponse: state.submission.response,
+    notes: state.submission.notes
   });
+
   if (!res.ok) {
-    alert('生成 Response to Reviewers 失敗：' + (res.error || '未知錯誤'));
+    alert('生成回覆 reviewers 草稿失敗：' + (res.error || '未知錯誤'));
     return;
   }
+
   const text = (res.data && res.data.text) || '';
   state.submission.response = text;
+
   const r = document.getElementById('sub-response');
   if (r) r.value = text;
+
   scheduleSaveState();
 }
 
-function appendSubmissionSummaryToChat() {
-  const parts = [];
-  parts.push('投稿包總覽：');
-  if (state.submission.coverLetter) parts.push('\n[Cover Letter]\n' + state.submission.coverLetter.slice(0, 800) + (state.submission.coverLetter.length > 800 ? '\n……' : ''));
-  if (state.submission.response) parts.push('\n[Response to Reviewers]\n' + state.submission.response.slice(0, 800) + (state.submission.response.length > 800 ? '\n……' : ''));
-  if (state.submission.notes) parts.push('\n[投稿備註]\n' + state.submission.notes);
-  appendChatMessage('user', parts.join('\n'));
-}
+/**
+ * 投稿總檢查：把 cover letter / response / notes＋全文 丟給 AI 做一次總審查
+ * 後端 action: submissionCheck
+ * 期望回傳格式: { ok: true, data: { summary: "..." } }
+ */
+async function appendSubmissionSummaryToChat() {
+  const res = await callBackend('submissionCheck', {
+    lang: state.lang,
+    stylePreset: state.stylePreset,
+    projectMeta: state.projectMeta,
+    journalProfile: state.journalProfiles[state.projectMeta.journalKey] || null,
+    chapters: state.chapters,
+    submission: state.submission
+  });
 
-// =======================
-// 完成
-// =======================
+  if (!res.ok) {
+    alert('投稿總檢查失敗：' + (res.error || '未知錯誤'));
+    return;
+  }
+
+  const data = res.data || {};
+  const summary = data.summary || '後端未回傳摘要內容。';
+
+  // 顯示在左側 AI 面板
+  appendChatMessage('assistant', summary);
+}
 </script>
 </body>
 </html>
