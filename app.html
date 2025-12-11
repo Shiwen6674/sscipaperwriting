@@ -1239,17 +1239,520 @@ function switchTab(tabId) {
 // =======================
 // 期刊列表
 // =======================
+// =======================
+// 期刊列表（SSCI 約 50 本，含四類分類標籤）
+// =======================
 function mapJournalData() {
   const list = [
-    { id: 'ijse', name: 'International Journal of Science Education', abbr: 'IJSE', category: 'Science & Mathematics Education', scope: '科學教育理論與實證研究，含各學段與議題。', wordLimit: '約 7,000–8,000 字', note: '重視理論與方法嚴謹度。' },
-    { id: 'rise', name: 'Research in Science Education', abbr: 'RISE', category: 'Science & Mathematics Education', scope: '科學教育實證研究與課程改革。', wordLimit: '約 8,000 字', note: '常見亞太區研究。' },
-    { id: 'ijsme', name: 'International Journal of Science and Mathematics Education', abbr: 'IJSME', category: 'Science & Mathematics Education', scope: '科學與數學教育整合研究。', wordLimit: '約 7,000–9,000 字', note: '適合 PISA、STEM、課室研究。' },
-    { id: 'siced', name: 'Science Education', abbr: 'SciEd', category: 'Science & Mathematics Education', scope: '頂尖科學教育期刊，重理論貢獻。', wordLimit: '約 9,000–10,000 字', note: '審查嚴格，偏理論與大型研究。' },
-    { id: 'lni', name: 'Learning and Instruction', abbr: 'L&I', category: 'Educational Psychology & Measurement', scope: '學習與教學機制之實證研究。', wordLimit: '約 7,500–9,000 字', note: '適合精緻實驗與準實驗設計。' },
-    { id: 'taper', name: 'Asia-Pacific Education Researcher', abbr: 'TAPER', category: 'General Education & Policy', scope: '亞太教育研究，含教師教育、課程與評量等。', wordLimit: '約 6,000–8,000 字', note: '適合區域實證研究與比較研究。' },
-    { id: 'tte', name: 'Teaching and Teacher Education', abbr: 'TTE', category: 'Teacher, Special, Diverse Education', scope: '教師專業發展、教學研究。', wordLimit: '約 7,000–8,000 字', note: '常見教師 AI 素養、TPACK 等主題。' },
-    { id: 'ce', name: 'Computers & Education', abbr: 'C&E', category: 'Educational Technology & Higher Education', scope: '教育科技整合之實證研究。', wordLimit: '約 7,000–9,000 字', note: '對研究設計與統計要求高。' }
+    // --- 科學教育為主 ---
+    {
+      id: 'ijse',
+      name: 'International Journal of Science Education',
+      abbr: 'IJSE',
+      category: 'Science Education',
+      scope: '各學段科學教育的理論與實證研究，含課程、教學、評量與政策。',
+      wordLimit: '約 7,000–8,000 字（Article）',
+      note: '老牌科學教育 SSCI 期刊，重視理論架構與研究設計嚴謹度。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'rise',
+      name: 'Research in Science Education',
+      abbr: 'RISE',
+      category: 'Science Education',
+      scope: '科學學習、教學改革與教師專業發展等實證研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '常見亞太與跨國比較研究，重視方法扎實與情境描述。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'ijsme',
+      name: 'International Journal of Science and Mathematics Education',
+      abbr: 'IJSME',
+      category: 'Science & Mathematics Education',
+      scope: '科學與數學教育整合研究，含 PISA、STEM、探究與課室研究。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '亞太區重要期刊之一，歡迎實證與系統性回顧。',
+      fieldTags: ['science', 'math']
+    },
+    {
+      id: 'scied',
+      name: 'Science Education',
+      abbr: 'SciEd',
+      category: 'Science Education',
+      scope: '科學教育理論發展與高影響力實證研究。',
+      wordLimit: '約 9,000–10,000 字',
+      note: '頂尖 Q1 期刊，強調理論貢獻與創新研究設計。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'jrst',
+      name: 'Journal of Research in Science Teaching',
+      abbr: 'JRST',
+      category: 'Science Education',
+      scope: '科學教學、學習歷程、評量與課室互動等研究。',
+      wordLimit: '約 8,000–9,000 字',
+      note: '與 SciEd 並列經典科教期刊，審稿嚴謹。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'jste',
+      name: 'Journal of Science Teacher Education',
+      abbr: 'JSTE',
+      category: 'Science Teacher Education',
+      scope: '科學教師培育、在職進修、專業學習社群等相關研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合師培課程、TPACK、專業發展研究。',
+      fieldTags: ['science', 'general']
+    },
+    {
+      id: 'csse',
+      name: 'Cultural Studies of Science Education',
+      abbr: 'CSSE',
+      category: 'Science Education',
+      scope: '科學教育中的文化、社會與批判研究視角。',
+      wordLimit: '約 8,000–10,000 字',
+      note: '偏質性與批判取向，關注社會文化脈絡。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'sci_edu',
+      name: 'Science & Education',
+      abbr: 'S&E',
+      category: 'Science Education / History & Philosophy',
+      scope: '科學史、科學哲學與科學教育的交叉研究。',
+      wordLimit: '約 8,000–10,000 字',
+      note: '適合哲學、歷史與科學教育整合論文。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'ijstem',
+      name: 'International Journal of STEM Education',
+      abbr: 'IJSTEM',
+      category: 'STEM Education',
+      scope: '跨學科 STEM 教育、課程設計與學習成效研究。',
+      wordLimit: '一般 Article 約 7,000–9,000 字',
+      note: '開放取用 Q1 期刊，常見 STEM 課程與政策研究。',
+      fieldTags: ['science', 'math', 'tech']
+    },
+    {
+      id: 'prper',
+      name: 'Physical Review Physics Education Research',
+      abbr: 'PRPER',
+      category: 'Physics Education',
+      scope: '物理學習、概念改變與評量工具之研究。',
+      wordLimit: '通常 7,000–9,000 字，依內容彈性處理。',
+      note: '物理教育專門期刊，偏量化與嚴謹實驗設計。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'cerp',
+      name: 'Chemistry Education Research and Practice',
+      abbr: 'CERP',
+      category: 'Chemistry Education',
+      scope: '化學教育、課程設計、概念理解與教學策略研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: 'RSC 出版，重視學習機制與教學創新。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'jce',
+      name: 'Journal of Chemical Education',
+      abbr: 'JCE',
+      category: 'Chemistry Education',
+      scope: '化學教育實務、教材設計與教學研究。',
+      wordLimit: '約 6,000–8,000 字（研究類稿件）',
+      note: '兼具教學實務與研究的國際期刊。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'jbioed',
+      name: 'Journal of Biological Education',
+      abbr: 'JBiolEd',
+      category: 'Biology Education',
+      scope: '生物教育、實驗活動與課程改革。',
+      wordLimit: '約 6,000–8,000 字',
+      note: '適合中學與大學生物教育研究。',
+      fieldTags: ['science']
+    },
+    {
+      id: 'jset',
+      name: 'Journal of Science Education and Technology',
+      abbr: 'JSET',
+      category: 'Science Education & Technology',
+      scope: '科學教育與科技整合、數位學習與教學設計。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合探討線上學習、模擬、科技輔助科學學習。',
+      fieldTags: ['science', 'tech']
+    },
+    {
+      id: 'sei',
+      name: 'Science Education International',
+      abbr: 'SEI',
+      category: 'Science Education',
+      scope: '國際科學教育實務與研究報告。',
+      wordLimit: '約 6,000–7,000 字',
+      note: '由 ICASE 支持，適合課室與教師實務研究。',
+      fieldTags: ['science']
+    },
+
+    // --- 數學教育為主 ---
+    {
+      id: 'esm',
+      name: 'Educational Studies in Mathematics',
+      abbr: 'ESM',
+      category: 'Mathematics Education',
+      scope: '數學學習理論、課室互動與教師知識研究。',
+      wordLimit: '約 8,000–9,000 字',
+      note: '數學教育領域核心 SSCI 期刊。',
+      fieldTags: ['math']
+    },
+    {
+      id: 'jrme',
+      name: 'Journal for Research in Mathematics Education',
+      abbr: 'JRME',
+      category: 'Mathematics Education',
+      scope: '高品質數學教育研究，強調理論與方法嚴謹。',
+      wordLimit: '約 8,000–9,000 字',
+      note: 'NCTM 旗艦期刊，競爭激烈。',
+      fieldTags: ['math']
+    },
+    {
+      id: 'zdm',
+      name: 'ZDM – Mathematics Education',
+      abbr: 'ZDM',
+      category: 'Mathematics Education',
+      scope: '數學教育多議題專題號，含評量、技術與教師教育。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '偏重專題特刊與國際議題。',
+      fieldTags: ['math']
+    },
+    {
+      id: 'jmte',
+      name: 'Journal of Mathematics Teacher Education',
+      abbr: 'JMTE',
+      category: 'Mathematics Teacher Education',
+      scope: '數學教師培育、專業發展與課室實踐研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合師培方案與教師知識研究。',
+      fieldTags: ['math', 'general']
+    },
+    {
+      id: 'mtl',
+      name: 'Mathematical Thinking and Learning',
+      abbr: 'MTL',
+      category: 'Mathematics Education',
+      scope: '數學思維、概念發展與認知研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '偏認知與學習理論，常用量化與實驗設計。',
+      fieldTags: ['math']
+    },
+    {
+      id: 'ijmest',
+      name: 'International Journal of Mathematical Education in Science and Technology',
+      abbr: 'IJMEST',
+      category: 'Mathematics Education',
+      scope: '數學在科學與工程領域中的教學與學習。',
+      wordLimit: '約 6,000–7,000 字',
+      note: '適合跨理工領域的數學教育研究。',
+      fieldTags: ['math', 'science']
+    },
+
+    // --- 技術教育／教育科技為主 ---
+    {
+      id: 'ce',
+      name: 'Computers & Education',
+      abbr: 'C&E',
+      category: 'Educational Technology',
+      scope: '科技融入學習、線上學習平台與數據驅動學習研究。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '教育科技頂尖 Q1 期刊，重視實證與大樣本研究。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'bjet',
+      name: 'British Journal of Educational Technology',
+      abbr: 'BJET',
+      category: 'Educational Technology',
+      scope: '數位學習、媒體與學習設計、教育科技政策與實務。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '接受多元方法，包括質性與混合方法。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'jcal',
+      name: 'Journal of Computer Assisted Learning',
+      abbr: 'JCAL',
+      category: 'Educational Technology',
+      scope: '電腦與科技輔助學習、學習分析與線上互動。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '強調學習理論與科技應用的連結。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'ajet',
+      name: 'Australasian Journal of Educational Technology',
+      abbr: 'AJET',
+      category: 'Educational Technology',
+      scope: '亞太區教育科技應用、線上教學與課程設計。',
+      wordLimit: '約 6,000–8,000 字',
+      note: '開放取用，常見教學實驗與設計研究。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'ile',
+      name: 'Interactive Learning Environments',
+      abbr: 'ILE',
+      category: 'Educational Technology',
+      scope: '互動學習系統、遊戲化、模擬與探究學習環境。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合探討系統設計與學習成效。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'ihe',
+      name: 'Internet and Higher Education',
+      abbr: 'IHE',
+      category: 'Higher Education / EdTech',
+      scope: '高等教育中的線上學習、MOOC、混成學習等。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '高教＋教科交叉領域，偏高影響力研究。',
+      fieldTags: ['tech', 'general']
+    },
+    {
+      id: 'etrd',
+      name: 'Educational Technology Research and Development',
+      abbr: 'ETR&D',
+      category: 'Educational Technology',
+      scope: '教學設計理論、系統化設計與科技創新研究。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '同時刊載研究與開發研究（R&D）。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'ets',
+      name: 'Educational Technology & Society',
+      abbr: 'ET&S',
+      category: 'Educational Technology',
+      scope: '科技、學習者與社會之間的互動與影響。',
+      wordLimit: '約 6,000–8,000 字',
+      note: '開放取用，接受多元研究主題與方法。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'tlt',
+      name: 'IEEE Transactions on Learning Technologies',
+      abbr: 'TLT',
+      category: 'Learning Technologies',
+      scope: '智慧型學習系統、AI 輔助學習與計算方法。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '偏工程與計算導向的教育科技研究。',
+      fieldTags: ['tech']
+    },
+    {
+      id: 'ijtde',
+      name: 'International Journal of Technology and Design Education',
+      abbr: 'IJTDE',
+      category: 'Technology & Design Education',
+      scope: '技術教育、設計教育與工程素養。',
+      wordLimit: '約 6,000–8,000 字',
+      note: '適合技術教育、設計課程與工程教育研究。',
+      fieldTags: ['tech', 'general']
+    },
+    {
+      id: 'jee',
+      name: 'Journal of Engineering Education',
+      abbr: 'JEE',
+      category: 'Engineering Education',
+      scope: '工程教育改革、學習成效與課程設計研究。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '工程教育領域核心 SSCI 期刊。',
+      fieldTags: ['tech']
+    },
+
+    // --- 一般教育／教師教育／教育心理為主 ---
+    {
+      id: 'tte',
+      name: 'Teaching and Teacher Education',
+      abbr: 'TTE',
+      category: 'Teacher Education',
+      scope: '教師專業發展、教學實務與教師教育政策。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '教師教育主題最常用之 SSCI 期刊之一。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'li',
+      name: 'Learning and Instruction',
+      abbr: 'L&I',
+      category: 'Educational Psychology / Learning Sciences',
+      scope: '學習機制、教學介入與認知／動機研究。',
+      wordLimit: '約 7,500–9,000 字',
+      note: '偏實驗與準實驗設計，強調機制與貢獻。',
+      fieldTags: ['general', 'science', 'math']
+    },
+    {
+      id: 'tandt',
+      name: 'Teachers and Teaching: Theory and Practice',
+      abbr: 'T&T',
+      category: 'Teacher Education',
+      scope: '教師信念、教學實作與專業身份研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合質性與混合方法的教師研究。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'taper',
+      name: 'Asia-Pacific Education Researcher',
+      abbr: 'TAPER',
+      category: 'General Education',
+      scope: '亞太教育議題、課程與評量、教師教育與政策。',
+      wordLimit: '約 6,000–8,000 字',
+      note: '區域性 SSCI 期刊，適合台灣與東亞研究。',
+      fieldTags: ['general', 'science']
+    },
+    {
+      id: 'apjte',
+      name: 'Asia-Pacific Journal of Teacher Education',
+      abbr: 'APJTE',
+      category: 'Teacher Education',
+      scope: '亞太地區教師教育、專業發展與政策分析。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '聚焦教師教育議題的國際期刊。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'jep',
+      name: 'Journal of Educational Psychology',
+      abbr: 'JEP',
+      category: 'Educational Psychology',
+      scope: '學習、動機、評量與教學相關心理學研究。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '教育心理領域核心頂尖期刊。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'er',
+      name: 'Educational Researcher',
+      abbr: 'ER',
+      category: 'General Education',
+      scope: '教育政策、方法論與重大議題之短篇高影響力論文。',
+      wordLimit: '較短，約 5,000–7,000 字，依欄位而定。',
+      note: '偏政策與方法論評論，競爭激烈。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'rer',
+      name: 'Review of Educational Research',
+      abbr: 'RER',
+      category: 'General Education',
+      scope: '高品質整合性與系統性文獻回顧。',
+      wordLimit: '可達 10,000 字以上，視回顧深度而定。',
+      note: '專門刊載綜述與整合性評論的頂尖期刊。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'she',
+      name: 'Studies in Higher Education',
+      abbr: 'SHE',
+      category: 'Higher Education',
+      scope: '高等教育政策、教學、學習與評量研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '高教領域重要期刊之一。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'he',
+      name: 'Higher Education',
+      abbr: 'HE',
+      category: 'Higher Education',
+      scope: '高教制度、國際化、品質保證與學生經驗研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '以政策與制度研究見長。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'jcs',
+      name: 'Journal of Curriculum Studies',
+      abbr: 'JCS',
+      category: 'Curriculum Studies',
+      scope: '課程理論、政策與課程改革研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '課程研究核心期刊，適合教科書與課程分析。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'instrsci',
+      name: 'Instructional Science',
+      abbr: 'InstrSci',
+      category: 'Learning Sciences / Instructional Design',
+      scope: '教學設計、學習機制與教學介入研究。',
+      wordLimit: '約 7,000–9,000 字',
+      note: '介於學習科學與教育科技之間的期刊。',
+      fieldTags: ['general', 'tech']
+    },
+    {
+      id: 'aie',
+      name: 'Assessment in Education: Principles, Policy & Practice',
+      abbr: 'AIE',
+      category: 'Assessment',
+      scope: '教育評量理論、政策與實務。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合大規模評量與測驗相關研究。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'compare',
+      name: 'Compare: A Journal of Comparative and International Education',
+      abbr: 'Compare',
+      category: 'Comparative & International Education',
+      scope: '比較教育、國際教育政策與系統比較研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合同一主題跨國比較研究。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'ijer',
+      name: 'International Journal of Educational Research',
+      abbr: 'IJER',
+      category: 'General Education',
+      scope: '多元教育議題，包括教學、學習與政策。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '接受廣泛教育主題與多種方法。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'bjep',
+      name: 'British Journal of Educational Psychology',
+      abbr: 'BJEP',
+      category: 'Educational Psychology',
+      scope: '學習、動機、社會情緒與認知發展研究。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '偏心理學導向的教育研究。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'ijed',
+      name: 'International Journal of Educational Development',
+      abbr: 'IJED',
+      category: 'Educational Development',
+      scope: '教育發展、永續、發展中國家教育議題。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合發展脈絡與政策導向研究。',
+      fieldTags: ['general']
+    },
+    {
+      id: 'rpie',
+      name: 'Research Papers in Education',
+      abbr: 'RPIE',
+      category: 'General Education',
+      scope: '各類教育研究，偏向實證與理論連結。',
+      wordLimit: '約 7,000–8,000 字',
+      note: '適合單一國家或地區的實證研究。',
+      fieldTags: ['general']
+    }
   ];
+
   const obj = {};
   list.forEach(j => {
     obj[j.id] = {
@@ -1258,7 +1761,8 @@ function mapJournalData() {
       category: j.category,
       scope: j.scope,
       wordLimit: j.wordLimit,
-      note: j.note
+      note: j.note,
+      fieldTags: j.fieldTags || []
     };
   });
   return obj;
@@ -1269,23 +1773,48 @@ function initJournalSelect() {
   if (!sel) return;
   sel.innerHTML = '';
 
+  // 預設提示
   const placeholder = document.createElement('option');
   placeholder.value = '';
   placeholder.textContent = '請選擇目標期刊';
   sel.appendChild(placeholder);
 
-  Object.entries(state.journalProfiles).forEach(([key, jp]) => {
-    const o = document.createElement('option');
-    o.value = key;
-    o.textContent = `${jp.name} (${jp.abbr})`;
-    sel.appendChild(o);
+  // 四大類分組（同一期刊可在多組出現）
+  const groups = [
+    { key: 'science', label: '─ 科學教育 ─' },
+    { key: 'math',    label: '─ 數學教育 ─' },
+    { key: 'tech',    label: '─ 技術 / 教育科技 ─' },
+    { key: 'general', label: '─ 一般教育 ─' }
+  ];
+
+  groups.forEach(g => {
+    const og = document.createElement('optgroup');
+    og.label = g.label;
+
+    Object.entries(state.journalProfiles).forEach(([id, jp]) => {
+      const tags = jp.fieldTags || [];
+      if (tags.includes(g.key)) {
+        const o = document.createElement('option');
+        o.value = id;
+        o.textContent = `${jp.name} (${jp.abbr})`;
+        og.appendChild(o);
+      }
+    });
+
+    if (og.children.length > 0) {
+      sel.appendChild(og);
+    }
   });
 
+  // 還原既有選擇（projectMeta 裡存的是 id）
   if (state.projectMeta.journalKey) {
     sel.value = state.projectMeta.journalKey;
-    updateJournalProfile();
   }
+
+  // 更新右側摘要與側邊欄
+  updateJournalProfile();
 }
+
 
 function updateJournalProfile() {
   const sel = document.getElementById('journal-select');
